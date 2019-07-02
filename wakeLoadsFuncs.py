@@ -7,18 +7,16 @@ from scipy import interpolate
 # import _porteagel_fortran
 import gaus
 
-def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch):
+def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=90.,shearExp=0.):
 
     N = len(r)
     M = 0.
 
     yaw = 0.
     tilt = 0.
-    shearExp = 0.
 
     aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
                            precone, tilt, yaw, shearExp, hubHt, nSector)
-    azimuth = 90.
     loads_flap, loads_edge = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 
     #approximate load at r = Rhub
@@ -86,8 +84,26 @@ def findXY(x_hub,y_hub,r,yaw_deg):
     return sideN_x,sideN_y,sideS_x,sideS_y
 
 
-def get_speeds(turbineX, turbineY, xpoints, ypoints, wind_speed, wec_factor=1.0,wake_model_version=2016,sm_smoothing=700.,
-                calc_k_star=True,ti_calculation_method=2,wake_combination_method=1):
+def findXYZ(x_hub,y_hub,z_hub,r,yaw_deg,azimuth_deg):
+    # assuming the x and y coordinates have been rotated such that the wind is
+    # coming from left to right
+    # yaw CCW positive
+    sy = np.sin(np.deg2rad(yaw_deg))
+    cy = np.cos(np.deg2rad(yaw_deg))
+
+    sa = np.sin(np.deg2rad(azimuth_deg))
+    ca = np.cos(np.deg2rad(azimuth_deg))
+
+    x_locs = x_hub - r*sy*sa
+    y_locs = y_hub - r*cy*sa
+    z_locs = z_hub + r*ca
+
+
+    return x_locs, y_locs, z_locs
+
+
+def get_speeds(turbineX, turbineY, xpoints, ypoints, zpoints, wind_speed, wec_factor=1.0,wake_model_version=2016,sm_smoothing=700.,
+                calc_k_star=True,ti_calculation_method=2,wake_combination_method=1,shearExp=0.):
     nTurbines = len(turbineX)
     turbineZ = np.ones(nTurbines)*90.
     yaw = np.zeros(nTurbines)
@@ -96,15 +112,15 @@ def get_speeds(turbineX, turbineY, xpoints, ypoints, wind_speed, wec_factor=1.0,
     kz = 0.022
     alpha = 2.32
     beta = 0.154
-    I = 0.075
+    I = 0.11
     z_ref = 50.
     z_0 = 0.
-    shear_exp = 0.15
+    shear_exp = shearExp
     RotorPointsY = np.array([0.])
     RotorPointsZ = np.array([0.])
     velX = xpoints
     velY = ypoints
-    velZ = np.ones_like(velX)*90.
+    velZ = zpoints
 
     sorted_x_idx = np.argsort(turbineX)
 
@@ -114,12 +130,48 @@ def get_speeds(turbineX, turbineY, xpoints, ypoints, wind_speed, wec_factor=1.0,
     ct_curve_wind_speed = np.ones_like(Ct)*wind_speed
     ct_curve_ct = Ct
 
-    ws_array = gaus.porteagel_visualize(turbineX, sorted_x_idx, turbineY, turbineZ, rotorDiameter, Ct,
+    ws_array, wake_diameters = gaus.porteagel_visualize(turbineX, sorted_x_idx, turbineY, turbineZ, rotorDiameter, Ct,
                                            wind_speed, yaw, ky, kz, alpha, beta, I, RotorPointsY,
                                            RotorPointsZ, z_ref, z_0, shear_exp, velX, velY, velZ,
                                            wake_combination_method, ti_calculation_method, calc_k_star,
                                            wec_factor, wake_model_version, interp_type, use_ct_curve,
                                            ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
+
+    return ws_array, wake_diameters
+
+
+def get_eff_turbine_speeds(turbineX, turbineY, wind_speed, wec_factor=1.0,wake_model_version=2016,sm_smoothing=700.,
+                calc_k_star=True,ti_calculation_method=2,wake_combination_method=1,shearExp=0.):
+    nTurbines = len(turbineX)
+    turbineZ = np.ones(nTurbines)*90.
+    yaw = np.zeros(nTurbines)
+    rotorDiameter = np.ones(nTurbines)*126.4
+    ky = 0.022
+    kz = 0.022
+    alpha = 2.32
+    beta = 0.154
+    I = 0.11
+    z_ref = 50.
+    z_0 = 0.
+    shear_exp = shearExp
+    RotorPointsY = np.array([0.])
+    RotorPointsZ = np.array([0.])
+
+    sorted_x_idx = np.argsort(turbineX)
+
+    use_ct_curve = False
+    interp_type = 1.
+    Ct = np.ones(nTurbines)*8./9.
+    ct_curve_wind_speed = np.ones_like(Ct)*wind_speed
+    ct_curve_ct = Ct
+    print_ti = False
+
+    ws_array = gaus.porteagel_analyze(turbineX,sorted_x_idx,turbineY,
+                        turbineZ,rotorDiameter,Ct,wind_speed,yaw,ky,kz,alpha,beta,
+                        I,RotorPointsY,RotorPointsZ,z_ref,z_0,shear_exp,wake_combination_method,
+                        ti_calculation_method,calc_k_star,wec_factor,print_ti,wake_model_version,
+                        interp_type,use_ct_curve,ct_curve_wind_speed,ct_curve_ct,sm_smoothing)
+
     return ws_array
 
 if __name__ == '__main__':
@@ -185,42 +237,91 @@ if __name__ == '__main__':
     #                                     hubHt,nSector,Omega,pitch)
     # print M
 
-    turbineX = np.array([0.,504.])
-    turbineY = np.array([0.,126.])
-    wind_speed = 8.
-
-    x1,y1,x2,y2 = findXY(turbineX[0],turbineY[0],r,0.)
-    speeds1 = get_speeds(turbineX, turbineY, x1, y1, wind_speed)
-    speeds2 = get_speeds(turbineX, turbineY, x2, y2, wind_speed)
-    M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
-    M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
-
-    print M1_flap-M2_flap
-    print M1_edge-M2_edge
-
-    x1,y1,x2,y2 = findXY(turbineX[1],turbineY[1],r,0.)
-    speeds1 = get_speeds(turbineX, turbineY, x1, y1, wind_speed)
-    speeds2 = get_speeds(turbineX, turbineY, x2, y2, wind_speed)
-    M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
-    M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
-
-    print M1_flap-M2_flap
-    print M1_edge-M2_edge
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(15,5))
+    ax1 = plt.subplot(131)
+    ax2 = plt.subplot(132)
+    ax3 = plt.subplot(133)
 
 
-    # import matplotlib.pyplot as plt
-    # plt.plot(x1,y1,'o',color='C0')
-    # plt.plot(x2,y2,'o',color='C0')
-    # plt.plot(0.,0.,'o',color='C1')
-    # plt.axis('equal')
-    # plt.show()
+    az = np.linspace(0.,720.*5,300)
+    for i in range(100):
+        ax1.cla()
+        ax2.cla()
+        ax3.cla()
+        ax1.axis('off')
+        ax2.axis('off')
+        ax3.axis('off')
+        ax1.axis('square')
+        ax2.axis('square')
+        ax3.axis('square')
+        ax1.set_ylim(-70.,70.)
+        ax2.set_ylim(30.,170.)
+        ax3.set_ylim(30.,170.)
+        ax1.set_xlim(-10.,10.)
+        ax2.set_xlim(-10.,10.)
+        ax3.set_xlim(70.,-70.)
 
-    # plt.plot(locs,M)
-    # plt.show()
+        azimuth_deg = az[i]
+        yaw_deg = 0.
+        x_locs,y_locs,z_locs = findXYZ(0.,0.,100.,r,yaw_deg,azimuth_deg)
 
-    # plt.plot(r, Tp/1e3, 'k', label='lead-lag')
-    # plt.plot(r, Np/1e3, 'r', label='flapwise')
-    # plt.xlabel('blade fraction')
-    # plt.ylabel('distributed aerodynamic loads (kN)')
-    # plt.legend(loc='upper left')
-    # plt.show()
+
+        if az[i]%360 < 90. or az[i]%360 > 270.:
+            ax1.plot(0.,0.,'ob',markersize=15)
+        if az[i]%360 < 180.:
+            ax2.plot(0.,100.,'ob',markersize=15)
+        ax3.plot(0.,100.,'ob',markersize=15)
+
+        ax1.plot(x_locs,y_locs,'or')
+        ax2.plot(x_locs,z_locs,'or')
+        ax3.plot(y_locs,z_locs,'or')
+
+
+        if az[i]%360 > 90. and az[i]%360 < 270.:
+            ax1.plot(0.,0.,'ob',markersize=15)
+        if az[i]%360 > 180.:
+            ax2.plot(0.,100.,'ob',markersize=15)
+
+
+        plt.pause(0.01)
+
+    # turbineX = np.array([0.,504.])
+    # turbineY = np.array([0.,126.])
+    # wind_speed = 8.
+    #
+    # x1,y1,x2,y2 = findXY(turbineX[0],turbineY[0],r,0.)
+    # speeds1 = get_speeds(turbineX, turbineY, x1, y1, wind_speed)
+    # speeds2 = get_speeds(turbineX, turbineY, x2, y2, wind_speed)
+    # M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
+    # M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
+    #
+    # print M1_flap-M2_flap
+    # print M1_edge-M2_edge
+    #
+    # x1,y1,x2,y2 = findXY(turbineX[1],turbineY[1],r,0.)
+    # speeds1 = get_speeds(turbineX, turbineY, x1, y1, wind_speed)
+    # speeds2 = get_speeds(turbineX, turbineY, x2, y2, wind_speed)
+    # M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
+    # M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
+    #
+    # print M1_flap-M2_flap
+    # print M1_edge-M2_edge
+    #
+    #
+    # # import matplotlib.pyplot as plt
+    # # plt.plot(x1,y1,'o',color='C0')
+    # # plt.plot(x2,y2,'o',color='C0')
+    # # plt.plot(0.,0.,'o',color='C1')
+    # # plt.axis('equal')
+    # # plt.show()
+    #
+    # # plt.plot(locs,M)
+    # # plt.show()
+    #
+    # # plt.plot(r, Tp/1e3, 'k', label='lead-lag')
+    # # plt.plot(r, Np/1e3, 'r', label='flapwise')
+    # # plt.xlabel('blade fraction')
+    # # plt.ylabel('distributed aerodynamic loads (kN)')
+    # # plt.legend(loc='upper left')
+    # # plt.show()
