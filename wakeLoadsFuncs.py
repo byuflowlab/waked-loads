@@ -6,6 +6,8 @@ from scipy import interpolate
 # from _porteagel_fortran import porteagel_visualize
 # import _porteagel_fortran
 import gaus
+from wakeexchange.utilities import sunflower_points
+
 
 def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=90.,shearExp=0.):
 
@@ -103,7 +105,8 @@ def findXYZ(x_hub,y_hub,z_hub,r,yaw_deg,azimuth_deg):
 
 
 def get_speeds(turbineX, turbineY, xpoints, ypoints, zpoints, wind_speed, wec_factor=1.0,wake_model_version=2016,sm_smoothing=700.,
-                calc_k_star=True,ti_calculation_method=2,wake_combination_method=1,shearExp=0.):
+                calc_k_star=True,ti_calculation_method=2,wake_combination_method=1,shearExp=0.,TI=0.11):
+    wec_factor = 1.
     nTurbines = len(turbineX)
     turbineZ = np.ones(nTurbines)*90.
     yaw = np.zeros(nTurbines)
@@ -112,12 +115,15 @@ def get_speeds(turbineX, turbineY, xpoints, ypoints, zpoints, wind_speed, wec_fa
     kz = 0.022
     alpha = 2.32
     beta = 0.154
-    I = 0.11
+    I = TI
+    # I = 0.056
     z_ref = 50.
     z_0 = 0.
     shear_exp = shearExp
-    RotorPointsY = np.array([0.])
-    RotorPointsZ = np.array([0.])
+    # RotorPointsY = np.array([0.])
+    # RotorPointsZ = np.array([0.])
+    nRotorPoints = 20
+    RotorPointsY, RotorPointsZ = sunflower_points(nRotorPoints)
     velX = xpoints
     velY = ypoints
     velZ = zpoints
@@ -141,7 +147,8 @@ def get_speeds(turbineX, turbineY, xpoints, ypoints, zpoints, wind_speed, wec_fa
 
 
 def get_eff_turbine_speeds(turbineX, turbineY, wind_speed, wec_factor=1.0,wake_model_version=2016,sm_smoothing=700.,
-                calc_k_star=True,ti_calculation_method=2,wake_combination_method=1,shearExp=0.):
+                calc_k_star=True,ti_calculation_method=2,wake_combination_method=1,shearExp=0.,TI=0.11):
+    wec_factor = 1.
     nTurbines = len(turbineX)
     turbineZ = np.ones(nTurbines)*90.
     yaw = np.zeros(nTurbines)
@@ -150,12 +157,15 @@ def get_eff_turbine_speeds(turbineX, turbineY, wind_speed, wec_factor=1.0,wake_m
     kz = 0.022
     alpha = 2.32
     beta = 0.154
-    I = 0.11
+    I = TI
+    # I = 0.056
     z_ref = 50.
     z_0 = 0.
     shear_exp = shearExp
-    RotorPointsY = np.array([0.])
-    RotorPointsZ = np.array([0.])
+    # RotorPointsY = np.array([0.])
+    # RotorPointsZ = np.array([0.])
+    nRotorPoints = 20
+    RotorPointsY, RotorPointsZ = sunflower_points(nRotorPoints)
 
     sorted_x_idx = np.argsort(turbineX)
 
