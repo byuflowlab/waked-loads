@@ -1,3 +1,4 @@
+
 import numpy as np
 from ccblade import *
 from wakeLoadsFuncs import *
@@ -421,7 +422,7 @@ def get_loads_history(turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_s
             if dx < 0.:
                 amnt_waked[waking] = 0.
             else:
-                amnt_waked[waking] = amount_waked(dy,wake_radius[turb_index][waking]*1.75,rotor_diameter,position)
+                amnt_waked[waking] = amount_waked(dy,wake_radius[turb_index][waking],rotor_diameter,position)*2.
 
         waked_array = np.zeros(nTurbines)
         dx_array = np.zeros(nTurbines)
@@ -474,7 +475,7 @@ def get_loads_history(turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_s
     # plt.plot(t,f_atm_close(t))
     # plt.plot(t,m)
     if turb_index == 1.:
-        plt.plot(t,moments)
+        plt.plot(t,moments,label='super')
     # plt.show()
 
     return moments
@@ -518,7 +519,7 @@ def calc_damage(moments,freq,fos=3):
         # Nfail = (su/mar[i])**m
         Nfail = 10.**((-mar[i]/su+1.)/0.1)
         # print 'Nfail: ', Nfail
-        mult = 25.*365.*24.*6.*freq
+        mult = 20.*365.*24.*6.*freq
         d += count[i]*mult/Nfail
 
 
@@ -549,7 +550,7 @@ def farm_damage(turbineX,turbineY,windDirections,windFrequencies,atm_free,atm_cl
             # print Time.time()-s
             s = Time.time()
             # moments = get_loads_history(turbineXw,turbineYw,i,Omega_free,Omega_waked,free_speed,waked_speed,f_atm_free,f_atm_close,f_atm_far,N=N)
-            moments = get_loads_history(turbineX,turbineY,i,Omega_free,Omega_waked,free_speed,waked_speed,atm_free,atm_close,atm_far,TI=TI,N=N)
+            moments = get_loads_history(turbineXw,turbineYw,i,Omega_free,Omega_waked,free_speed,waked_speed,atm_free,atm_close,atm_far,TI=TI,N=N)
             # print Time.time()-s
             s = Time.time()
             damage[i] += calc_damage(moments,windFrequencies[j])
