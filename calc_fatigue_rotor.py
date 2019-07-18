@@ -320,8 +320,6 @@ def setup_atm(filename_free,filename_close,filename_far,TI=0.11,N=24001):
         my = lines[:,12]
         a = lines[:,5]
         time = time-time[0]
-        Omega_waked10 = np.mean(lines[:,6])
-        print 'Omega_waked10: ', Omega_waked10
 
         m_far = interp1d(time, my, kind='linear')
         a_far = interp1d(time, a, kind='linear')
@@ -357,17 +355,16 @@ def setup_atm(filename_free,filename_close,filename_far,TI=0.11,N=24001):
                 #waked close
                 x_locs,y_locs,z_locs = findXYZ(turbineX_close[1],turbineY_waked[1],90.,r,yaw_deg,az)
                 speeds, _ = get_speeds(turbineX_close, turbineY_waked, x_locs, y_locs, z_locs, wind_speed,TI=TI)
-                ccblade_close[i], _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega_waked,pitch,azimuth=az)
+                ccblade_close[i], _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega_free,pitch,azimuth=az)
 
                 #waked far
                 x_locs,y_locs,z_locs = findXYZ(turbineX_far[1],turbineY_waked[1],90.,r,yaw_deg,az)
                 speeds, _ = get_speeds(turbineX_far, turbineY_waked, x_locs, y_locs, z_locs, wind_speed,TI=TI)
-                ccblade_far[i], _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega_waked10,pitch,azimuth=az)
+                ccblade_far[i], _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega_waked,pitch,azimuth=az)
 
                 if i == 0:
                         free_speed = get_eff_turbine_speeds(turbineX_close, turbineY_free, wind_speed,TI=TI)[1]
-                        # waked_speed = get_eff_turbine_speeds(turbineX_close, turbineY_waked, wind_speed,TI=TI)[1]
-                        waked_speed = get_eff_turbine_speeds(turbineX_far, turbineY_waked, wind_speed,TI=TI)[1]
+                        waked_speed = get_eff_turbine_speeds(turbineX_close, turbineY_waked, wind_speed,TI=TI)[1]
 
         f_free = interp1d(angles, ccblade_free/1000., kind='linear')
         f_close = interp1d(angles, ccblade_close/1000., kind='linear')
@@ -404,10 +401,10 @@ def setup_atm(filename_free,filename_close,filename_far,TI=0.11,N=24001):
         f_atm_close = interp1d(t, atm_close, kind='linear')
         f_atm_far = interp1d(t, atm_far, kind='linear')
 
-        return f_atm_free,f_atm_close,f_atm_far,Omega_free,Omega_waked10,free_speed,waked_speed
+        return f_atm_free,f_atm_close,f_atm_far,Omega_free,Omega_waked,free_speed,waked_speed
 
 
-def get_loads_history(turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_speed,waked_speed,f_atm_free,f_atm_close,f_atm_far,N=24001,TI=0.11,wind_speed=8.,rotor_diameter=126.4):
+def get_loads_history(turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_speed,waked_speed,f_atm_free,f_atm_close,f_atm_far,freq,N=24001,TI=0.11,wind_speed=8.,rotor_diameter=126.4):
     """
     get the loads history of interpolated FAST data superimposed onto CCBlade loads
 
@@ -435,7 +432,6 @@ def get_loads_history(turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_s
     ccblade_moments = np.zeros_like(angles)
 
     """CCBlade moments"""
-    s = Time.time()
     for i in range(len(ccblade_moments)):
         az = angles[i]
         x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],90.,r,yaw_deg,az)
@@ -444,78 +440,113 @@ def get_loads_history(turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_s
         if i == 0:
             actual_speed = get_eff_turbine_speeds(turbineX, turbineY, wind_speed,TI=TI)[1]
             Omega = (Omega_waked + (Omega_free-Omega_waked)/(free_speed-waked_speed) * (actual_speed-waked_speed))
-            print 'Omega: ', Omega
+
         ccblade_moments[i], _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=az)
 
     f_ccblade = interp1d(angles, ccblade_moments/1000., kind='linear')
 
     pos = np.linspace(0.,Omega*10.*360.,N)%360.
 
-    """amount waked"""
-
     _, sigma = get_speeds(turbineX, turbineY, np.array([0.]), np.array([0.]), np.array([0.]), wind_speed, TI=TI)
-    wake_radius = sigma*1.75
+    wake_radius = sigma*1.
 
-    waked_amount = np.zeros((nTurbines,N))
+    rotor_waked = np.zeros(nTurbines)
     dx_dist = np.zeros(nTurbines)
 
     for waking in range(nTurbines):
-        dx = turbineX[turb_index]-turbineX[waking]
+        dx_dist[waking] = turbineX[turb_index]-turbineX[waking]
         dy = turbineY[turb_index]-turbineY[waking]
-        dx_dist[waking] = dx
-        amnt_waked = np.zeros(len(angles))
-        for i in range(len(angles)):
-            if dx > 0.:
-                amnt_waked[i] = amount_waked(dy,wake_radius[turb_index][waking],rotor_diameter,angles[i])
-
-        waked_func = interp1d(angles, amnt_waked, kind='linear')
-        waked_amount[waking,:] = waked_func(pos)
-
-    # rotor_waked = np.zeros(nTurbines)
-    # for waking in range(nTurbines):
-    #     dy = turbineY[turb_index]-turbineY[waking]
-    #     rotor_waked[i] = rotor_amount_waked(dy,wake_radius,rotor_diameter)
+        rotor_waked[waking] = rotor_amount_waked(dy,wake_radius[turb_index][waking],rotor_diameter)
 
     t = np.linspace(0.,600.,N)
     dt = t[1]-t[0]
 
     moments = f_ccblade(pos)
 
+    num = 0
+    indices = np.argsort(dx_dist)
 
-    #this is the mega time consuming part. It has to loop through this 23000 times :/
-    for i in range(N):
-        amnt_waked = waked_amount[:,i]
 
-        waked_array = np.zeros(nTurbines)
-        dx_array = np.zeros(nTurbines)
+    damage = 0.
 
-        num = 0
-        indices = np.argsort(dx_dist)
 
-        #figure out which wakes are the most influential
-        for waking in range(nTurbines):
-            if dx_dist[indices[waking]] > 0.:
-                if amnt_waked[indices[waking]] > np.sum(waked_array[0:num]):
-                    waked_array[num] = amnt_waked[indices[waking]]-np.sum(waked_array[0:num])
-                    dx_array[num] = dx_dist[indices[waking]]
-                    num += 1
+    waked_array = np.zeros(nTurbines)
+    dx_array = np.zeros(nTurbines)
 
-        down = dx_array/rotor_diameter
-        unwaked = 1.-np.sum(waked_array)
+    #figure out which wakes are the most influential
+    if dx_dist[indices[waking]] > 0.:
+        if rotor_waked[indices[waking]] > np.sum(waked_array[0:num]):
+            waked_array[num] = rotor_waked[indices[waking]]-np.sum(waked_array[0:num])
+            dx_array[num] = dx_dist[indices[waking]]
+            num += 1
 
-        # down += 1.
+    down = dx_array/rotor_diameter
+    unwaked = 1.-np.sum(waked_array)
+
+    waked_moments4 = moments + f_atm_close(t)
+    waked_moments10 = moments + f_atm_far(t)
+    unwaked_moments = moments + f_atm_free(t)
+
+    # waked_moments4 = f_atm_close(t)
+    # waked_moments10 = f_atm_far(t)
+    # unwaked_moments = f_atm_free(t)
+
+    damage_4 = calc_damage(waked_moments4,freq,fos=3)
+    damage_10 = calc_damage(waked_moments10,freq,fos=3)
+    damage_free = calc_damage(unwaked_moments,freq,fos=3)
+
+    for k in range(np.count_nonzero(waked_array)):
+        if down[k] < 4.:
+              damage += damage_4*waked_array[k]
+        elif down[k] > 10.:
+              damage += damage_10*waked_array[k]
+        else:
+              damage += ((damage_4*(10.-down[k])/6.)+(damage_10*(down[k]-4.)/6.))*waked_array[k]
+
+    damage += damage_free*unwaked
+
+    # for waking in range(nTurbines):
 
         # see how to interpolate the FAST data
-        for k in range(np.count_nonzero(waked_array)):
-            if down[k] < 4.:
-                  moments[i] += f_atm_close(t[i])*waked_array[k]
-            elif down[k] > 10.:
-                  moments[i] += f_atm_far(t[i])*waked_array[k]
-            else:
-                  moments[i] += (f_atm_close(t[i])*(10.-down[k])/6.+f_atm_far(t[i])*(down[k]-4.)/6.)*waked_array[k]
-        moments[i] += f_atm_free(t[i])*unwaked
+        # for k in range(np.count_nonzero(waked_array)):
+        #     if down[k] < 4.:
+        #           moments += f_atm_close(t)*waked_array[k]
+        #           print 'close'
+        #     elif down[k] > 10.:
+        #           moments += f_atm_far(t)*waked_array[k]
+        #           print 'far'
+        #     else:
+        #           print 'between'
+        #           moments += ((f_atm_close(t)*(10.-down[k])/6.)+(f_atm_far(t)*(down[k]-4.)/6.))*waked_array[k]
+        #
+        # moments += f_atm_free(t)*unwaked
 
-    return moments
+        # waked_moments4 = moments + f_atm_close(t)
+        # waked_moments10 = moments + f_atm_far(t)
+        # unwaked_moments = moments + f_atm_free(t)
+        #
+        # damage_4 = calc_damage(waked_moments4,freq,fos=3)
+        # damage_10 = calc_damage(waked_moments10,freq,fos=3)
+        # damage_free = calc_damage(unwaked_moments,freq,fos=3)
+        #
+        # # print 'damage_4: ', damage_4
+        # # print 'damage_10: ', damage_10
+        # # print 'damage_free: ', damage_free
+        #
+        # for k in range(np.count_nonzero(waked_array)):
+        #     if down[k] < 4.:
+        #           damage += damage_4*waked_array[k]
+        #     elif down[k] > 10.:
+        #           damage += damage_10*waked_array[k]
+        #     else:
+        #           damage += ((damage_4*(10.-down[k])/6.)+(damage_10*(down[k]-4.)/6.))*waked_array[k]
+        #
+        # damage += damage_free*unwaked
+        # print 'unwaked: ', unwaked
+        # print 'damage: ', damage
+
+    # return moments
+    return damage
 
 
 def calc_damage(moments,freq,fos=3):
@@ -611,8 +642,222 @@ def farm_damage(turbineX,turbineY,windDirections,windFrequencies,atm_free,atm_cl
     for i in range(nTurbines):
         for j in range(nDirections):
             turbineXw, turbineYw = fast_calc_aep.windframe(windDirections[j], turbineX, turbineY)
-            moments = get_loads_history(turbineX,turbineY,i,Omega_free,Omega_waked,free_speed,waked_speed,atm_free,atm_close,atm_far,TI=TI,N=N)
-            damage[i] += calc_damage(moments,windFrequencies[j])
+            # moments = get_loads_history(turbineXw,turbineYw,i,Omega_free,Omega_waked,free_speed,waked_speed,atm_free,atm_close,atm_far,TI=TI,N=N)
+            # damage[i] += calc_damage(moments,windFrequencies[j])
+
+            damage[i] += get_loads_history(turbineXw,turbineYw,i,Omega_free,Omega_waked,free_speed,waked_speed,atm_free,atm_close,atm_far,windFrequencies[j],TI=TI,N=N)
+    return damage
+
+
+
+
+def new_setup_atm(filename_free,filename_close,filename_far,TI=0.11):
+        """
+        setup the atmospheric turbulence loads that get superimposed on the loads from CCBlade
+
+        inputs:
+        filename_free:      the freestream loads FAST file path
+        filename_close:     the 4D downstream fully waked loads FAST file path
+        filename_far:       the 10D downstream fully waked loads FAST file path
+        TI:                 the turbulence intensity
+
+        outputs:
+        f_atm_free:         a function giving the freestream atmospheric loads as a function of time
+        f_atm_close:        a function giving the 4D downstream fully waked atmospheric loads as a function of time
+        f_atm_far:          a function giving the 10D downstream fully waked atmospheric loads as a function of time
+        Omega_free:         the time average of the rotation rate for the freestream FAST file
+        Omega_waked:        the time average of the rotation rate for the close waked FAST file
+        free_speed:         the freestream wind speed
+        waked_speed:        the fully waked close wind speed
+        """
+
+        """free FAST"""
+        lines = np.loadtxt(filename_free,skiprows=8)
+        time = lines[:,0]
+        m_free = lines[:,12]
+        Omega_free = np.mean(lines[:,6])
+
+        """waked FAST CLOSE"""
+        lines = np.loadtxt(filename_close,skiprows=8)
+        time = lines[:,0]
+        m_close = lines[:,12]
+        Omega_waked = np.mean(lines[:,6])
+
+        """waked FAST FAR"""
+        lines = np.loadtxt(filename_far,skiprows=8)
+        time = lines[:,0]
+        m_far = lines[:,12]
+
+        """setup the CCBlade loads"""
+        turbineX_close = np.array([0.,126.4])*4.
+        turbineX_far = np.array([0.,126.4])*10.
+
+        turbineY_free = np.array([0.,1264000.])
+        turbineY_waked = np.array([0.,0.])
+
+        wind_speed = 8.
+        Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
+
+        #freestream
+        x_locs,y_locs,z_locs = findXYZ(turbineX_close[1],turbineY_free[1],90.,r,yaw_deg,0.)
+        speeds, _ = get_speeds(turbineX_close, turbineY_free, x_locs, y_locs, z_locs, wind_speed,TI=TI)
+        ccblade_free, _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega_free,pitch,azimuth=0.)
+
+        #waked close
+        x_locs,y_locs,z_locs = findXYZ(turbineX_close[1],turbineY_waked[1],90.,r,yaw_deg,0.)
+        speeds, _ = get_speeds(turbineX_close, turbineY_waked, x_locs, y_locs, z_locs, wind_speed,TI=TI)
+        ccblade_close, _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega_free,pitch,azimuth=0.)
+
+        #waked far
+        x_locs,y_locs,z_locs = findXYZ(turbineX_far[1],turbineY_waked[1],90.,r,yaw_deg,0.)
+        speeds, _ = get_speeds(turbineX_far, turbineY_waked, x_locs, y_locs, z_locs, wind_speed,TI=TI)
+        ccblade_far, _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega_waked,pitch,azimuth=0.)
+
+        free_speed = get_eff_turbine_speeds(turbineX_close, turbineY_free, wind_speed,TI=TI)[1]
+        waked_speed = get_eff_turbine_speeds(turbineX_close, turbineY_waked, wind_speed,TI=TI)[1]
+
+        """get atm loads"""
+        atm_free = m_free-ccblade_free
+        atm_close = m_close-ccblade_close
+        atm_far = m_far-ccblade_far
+
+        return atm_free,atm_close,atm_far,Omega_free,Omega_waked,free_speed,waked_speed
+
+
+def new_get_cc_loads(turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_speed,waked_speed,N,TI=0.11,wind_speed=8.):
+    """
+    get the loads history of interpolated FAST data superimposed onto CCBlade loads
+
+    inputs:
+    turbineX:       x locations of the turbines (in the wind frame)
+    turbineY:       y locations of the turbines (in the wind frame)
+    turb_index:     the index of the turbine of interest
+    Omega_free:     the time average of the rotation rate for the freestream FAST file
+    Omega_waked:    the time average of the rotation rate for the close waked FAST file
+    free_speed:     the freestream wind speed
+    waked_speed:    the fully waked close wind speed
+
+    outputs:
+    moments:        the root bending moments time history
+
+    """
+
+    nTurbines = len(turbineX)
+
+    Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
+    angles = np.linspace(0.,360.,100)
+    ccblade_moments = np.zeros_like(angles)
+
+    """CCBlade moments"""
+    for i in range(len(ccblade_moments)):
+        az = angles[i]
+        x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],90.,r,yaw_deg,az)
+        speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, wind_speed,TI=TI)
+
+        if i == 0:
+            actual_speed = get_eff_turbine_speeds(turbineX, turbineY, wind_speed,TI=TI)[1]
+            Omega = (Omega_waked + (Omega_free-Omega_waked)/(free_speed-waked_speed) * (actual_speed-waked_speed))
+
+        ccblade_moments[i], _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=az)
+
+    f_ccblade = interp1d(angles, ccblade_moments/1000., kind='linear')
+
+    pos = np.linspace(0.,Omega*10.*360.,N)%360.
+    moments = f_ccblade(pos)
+
+    # plt.plot(moments)
+    # plt.show()
+    return moments
+
+
+def new_damage_atm(turbineX,turbineY,turb_index,atm_free,atm_close,atm_far,cc_mean,freq,TI=0.11,wind_speed=8.,rotor_diameter=126.4):
+    _, sigma = get_speeds(turbineX, turbineY, np.array([0.]), np.array([0.]), np.array([0.]), wind_speed, TI=TI)
+    wake_radius = sigma*2.
+
+    nTurbines = len(turbineX)
+
+    rotor_waked = np.zeros(nTurbines)
+    dx_dist = np.zeros(nTurbines)
+
+    for waking in range(nTurbines):
+        dx_dist[waking] = turbineX[turb_index]-turbineX[waking]
+        dy = turbineY[turb_index]-turbineY[waking]
+        rotor_waked[waking] = rotor_amount_waked(dy,wake_radius[turb_index][waking],rotor_diameter)
+
+    num = 0
+    indices = np.argsort(dx_dist)
+
+    N = len(atm_free)
+    moments = np.ones(N)*cc_mean
+
+    for waking in range(nTurbines):
+
+        waked_array = np.zeros(nTurbines)
+        dx_array = np.zeros(nTurbines)
+
+        #figure out which wakes are the most influential
+        if dx_dist[indices[waking]] > 0.:
+            if rotor_waked[indices[waking]] > np.sum(waked_array[0:num]):
+                waked_array[num] = rotor_waked[indices[waking]]-np.sum(waked_array[0:num])
+                dx_array[num] = dx_dist[indices[waking]]
+                num += 1
+
+        down = dx_array/rotor_diameter
+        unwaked = 1.-np.sum(waked_array)
+
+        # see how to interpolate the FAST data
+        for k in range(np.count_nonzero(waked_array)):
+            if down[k] < 4.:
+                  moments += atm_close*waked_array[k]
+            elif down[k] > 10.:
+                  moments += atm_far*waked_array[k]
+            else:
+                  moments += ((atm_close*(10.-down[k])/6.)+(atm_far*(down[k]-4.)/6.))*waked_array[k]
+                  # moments += atm_close*waked_array[k]
+        moments += atm_free*unwaked
+
+    damage = calc_damage(moments,freq,fos=3)
+
+    return damage
+
+
+def new_farm_damage(turbineX,turbineY,windDirections,windFrequencies,atm_free,atm_close,atm_far,Omega_free,Omega_waked,free_speed,waked_speed,TI=0.11):
+    """
+    calculate the damage of each turbine in the farm for every wind direction
+
+    inputs:
+    turbineX:       x locations of the turbines (in the wind frame)
+    turbineY:       y locations of the turbines (in the wind frame)
+    windDirections: the wind directions
+    windFrequencies: the associated probabilities of the wind directions
+    atm_free:       a function giving the freestream atmospheric loads as a function of time
+    atm_close:      a function giving the 4D downstream fully waked atmospheric loads as a function of time
+    atm_far:        a function giving the 10D downstream fully waked atmospheric loads as a function of time
+    Omega_free:     the time average of the rotation rate for the freestream FAST file
+    Omega_waked:    the time average of the rotation rate for the close waked FAST file
+    free_speed:     the freestream wind speed
+    waked_speed:    the fully waked close wind speed
+
+
+    outputs:
+    damage:         fatigue damage of the farm
+
+    """
+
+    damage = np.zeros_like(turbineX)
+    nDirections = len(windDirections)
+    nTurbines = len(turbineX)
+
+    for j in range(nDirections):
+        turbineXw, turbineYw = fast_calc_aep.windframe(windDirections[j], turbineX, turbineY)
+        for i in range(nTurbines):
+            cc_moments = new_get_cc_loads(turbineXw,turbineYw,i,Omega_free,Omega_waked,free_speed,waked_speed,len(atm_free),TI=0.11,wind_speed=8.)
+            for k in range(len(cc_moments)):
+                cc_moments[k] = round(cc_moments[k],4)
+            damage_cc = calc_damage(cc_moments,windFrequencies[j],fos=3)
+            damage_atm = new_damage_atm(turbineXw,turbineYw,i,atm_free,atm_close,atm_far,np.mean(cc_moments),windFrequencies[j],TI=0.11,wind_speed=8.,rotor_diameter=126.4)
+            damage[i] += damage_cc*2.
+            damage[i] += damage_atm
     return damage
 
 

@@ -247,36 +247,36 @@ if __name__ == '__main__':
         # filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C437_W8_T5.6_P0.0_4D_L0/Model.out'
         # filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C455_W8_T5.6_P0.0_10D_L0/Model.out'
         #
-        N=24001
+        # N=24001
+        # #
+        # TI = 0.11
+        # print 'setup'
+        # s = Time.time()
+        # atm_free,atm_close,atm_far,Omega_free,Omega_waked,free_speed,waked_speed = setup_atm(filename_free,filename_close,filename_far,TI=TI,N=N)
+        # print Time.time()-s
         #
-        TI = 0.11
-        print 'setup'
-        s = Time.time()
-        atm_free,atm_close,atm_far,Omega_free,Omega_waked,free_speed,waked_speed = setup_atm(filename_free,filename_close,filename_far,TI=TI,N=N)
-        print Time.time()-s
-
-        sep = np.array([4.,7.,10.])
-        offset = np.array([-1.,-0.75,-0.5,-0.25,0.,0.25,0.5,0.75,1.])
-
-        # sep = np.array([4.])
-        # offset = np.array([0.5])
-        # offset = np.array([90000000.])
-        start_time = Time.time()
-        for i in range(len(sep)):
-                damage = np.zeros_like(offset)
-                for j in range(len(offset)):
-                        turbineX = np.array([0.,126.4*sep[i]])
-                        turbineY = np.array([0.,126.4])*offset[j]
-                        windDirections = np.array([270.])
-                        windFrequencies = np.array([1.])
-                        s = Time.time()
-                        damage[j] = farm_damage(turbineX,turbineY,windDirections,windFrequencies,atm_free,atm_close,atm_far,Omega_free,Omega_waked,free_speed,waked_speed,TI=TI,N=N)[1]
-                        print "time to run: ", (Time.time()-s)/2.
-                        print damage[j]
-                # plt.show()
-                print 'separation: ', sep[i]
-                print 'damage: ', repr(damage)
-        print "time to run: ", (Time.time()-start_time)
+        # sep = np.array([4.,7.,10.])
+        # offset = np.array([-1.,-0.75,-0.5,-0.25,0.,0.25,0.5,0.75,1.])
+        #
+        # # sep = np.array([4.])
+        # # offset = np.array([0.5])
+        # # offset = np.array([90000000.])
+        # start_time = Time.time()
+        # for i in range(len(sep)):
+        #         damage = np.zeros_like(offset)
+        #         for j in range(len(offset)):
+        #                 turbineX = np.array([0.,126.4*sep[i]])
+        #                 turbineY = np.array([0.,126.4])*offset[j]
+        #                 windDirections = np.array([270.])
+        #                 windFrequencies = np.array([1.])
+        #                 s = Time.time()
+        #                 damage[j] = farm_damage(turbineX,turbineY,windDirections,windFrequencies,atm_free,atm_close,atm_far,Omega_free,Omega_waked,free_speed,waked_speed,TI=TI,N=N)[1]
+        #                 print "time to run: ", (Time.time()-s)/2.
+        #                 print damage[j]
+        #         # plt.show()
+        #         print 'separation: ', sep[i]
+        #         print 'damage: ', repr(damage)
+        # print "time to run: ", (Time.time()-start_time)
 
 
         # plt.show()
@@ -350,14 +350,14 @@ if __name__ == '__main__':
         # super10 = np.array([0.91137728, 0.93595487, 0.94413618, 0.92833491, 0.89210531, 0.93120719, 0.92008385, 0.91197694, 0.90520249])
 
         #1.75*rad
-        super4 = np.array([0.6465743 , 0.78860154, 0.90094437, 1.00180077, 1.0227498 , 1.00450329, 0.89131835, 0.77691189, 0.6600066 ])
-        super7 = np.array([0.77986687, 0.90528373, 0.96459293, 0.9762949 , 0.95764617, 0.97673322, 0.95207005, 0.83987861, 0.79218427])
-        super10 = np.array([0.84477878, 0.93358042, 0.94413618, 0.92833491, 0.89210531, 0.93120719, 0.92008385, 0.9078248 , 0.83510624])
-        # super4 = np.array([0.64407964, 0.77874452, 0.90250068, 1.00258973, 1.0227498 ,
-        #                         1.00371455, 0.89010514, 0.77154326, 0.65945321])
-        # super7 = np.array([0.76890235, 0.90406207, 0.964592  , 0.9762949 , 0.95764617,
-        #                         0.97673322, 0.95088826, 0.83786392, 0.78751689])
-        # super10 = np.array([0.8470996 , 0.93515408, 0.94413618, 0.92833491, 0.89210531,
+        # super4 = np.array([0.6465743 , 0.78860154, 0.90094437, 1.00180077, 1.0227498 , 1.00450329, 0.89131835, 0.77691189, 0.6600066 ])
+        # super7 = np.array([0.77986687, 0.90528373, 0.96459293, 0.9762949 , 0.95764617, 0.97673322, 0.95207005, 0.83987861, 0.79218427])
+        # super10 = np.array([0.84477878, 0.93358042, 0.94413618, 0.92833491, 0.89210531, 0.93120719, 0.92008385, 0.9078248 , 0.83510624])
+       #  super4 = np.array([0.64407964, 0.77874452, 0.90250068, 1.00258973, 1.0227498 ,
+       #                          1.00371455, 0.89010514, 0.77154326, 0.65945321])
+       #  super7 = np.array([0.76890235, 0.90406207, 0.964592  , 0.9762949 , 0.95764617,
+       #                          0.97673322, 0.95088826, 0.83786392, 0.78751689])
+       #  super10 = np.array([0.8470996 , 0.93515408, 0.94413618, 0.92833491, 0.89210531,
        # 0.93120719, 0.92008385, 0.90821004, 0.83267762])
 
 
@@ -415,11 +415,11 @@ if __name__ == '__main__':
 
 
 
-        fig = plt.figure(figsize=[2.,2.])
-        # fig = plt.figure(figsize=[6.5,2.5])
-        ax1 = plt.subplot(111)
-        # ax2 = plt.subplot(132)
-        # ax3 = plt.subplot(133)
+        # fig = plt.figure(figsize=[2.,2.])
+        fig = plt.figure(figsize=[6.5,2.5])
+        ax1 = plt.subplot(131)
+        ax2 = plt.subplot(132)
+        ax3 = plt.subplot(133)
 
         import matplotlib as mpl
         label_size = 6
@@ -430,17 +430,17 @@ if __name__ == '__main__':
         ax1.set_xticklabels(ax1.get_xticks(), fontProperties)
         ax1.set_yticklabels(ax1.get_yticks(), fontProperties)
 
-        # ax2.set_xticklabels(ax2.get_xticks(), fontProperties)
-        # ax2.set_yticklabels(ax2.get_yticks(), fontProperties)
-        #
-        # ax3.set_xticklabels(ax3.get_xticks(), fontProperties)
-        # ax3.set_yticklabels(ax3.get_yticks(), fontProperties)
+        ax2.set_xticklabels(ax2.get_xticks(), fontProperties)
+        ax2.set_yticklabels(ax2.get_yticks(), fontProperties)
+
+        ax3.set_xticklabels(ax3.get_xticks(), fontProperties)
+        ax3.set_yticklabels(ax3.get_yticks(), fontProperties)
 
         offset = np.array([-1.,-0.75,-0.5,-0.25,0.,0.25,0.5,0.75,1.])
         # ax1.plot(offset,FAST4,'o',label='SOWFA+FAST',color='C3')
         # ax1.plot(offset,super4,'o',label='superimposed',color='C0')
-        ax1.plot(offset,FAST7,'o',label='SOWFA+FAST',color='C3',markersize=3)
-        ax1.plot(offset,super7,'o',label='superimposed',color='C0',markersize=3)
+        ax1.plot(offset,FAST7,'o',label='SOWFA+FAST',color='C3')
+        ax1.plot(offset,super7,'o',label='superimposed',color='C0')
         # ax1.plot(offset,FASTfree,'ok',label='freestream FAST')
         # ax1.plot(offset,freestreamCC,'og',label='freestream CC')
         ax1.plot(np.array([-2.,2.]),np.array([1.,1.])*FASTfree[0],'--',color='black',label='freestream loads')
@@ -450,50 +450,52 @@ if __name__ == '__main__':
         ax1.set_title('7D',family='serif',fontsize=8)
         ax1.set_ylabel('damage',family='serif',fontsize=8)
 
-        ax1.set_xlabel('offset (D)',family='serif',fontsize=8)
+        ax2.set_xlabel('offset (D)',family='serif',fontsize=8)
 
-        # ax2.plot(offset,FAST7,'or',color='C3')
-        # ax2.plot(offset,super7,'ob',color='C0')
-        # # ax2.plot(offset,FASTfree,'ok')
-        # # ax2.plot(offset,freestreamCC,'og')
-        # ax2.plot(np.array([-2.,2.]),np.array([1.,1.])*FASTfree[0],'--',color='black')
-        # # ax2.plot(np.array([-2.,2.]),np.array([1.,1.])*freestreamCC[0],'--',color='C0')
-        # ax2.set_title('7D',family='serif',fontsize=8)
-        # ax2.set_xlabel('offset (D)',family='serif',fontsize=8)
-        #
-        # ax3.plot(offset,FAST10,'or',color='C3')
-        # ax3.plot(offset,super10,'ob',color='C0')
-        # # ax3.plot(offset,FASTfree,'ok')
-        # # ax3.plot(offset,freestreamCC,'og')
-        # ax3.set_title('10D',family='serif',fontsize=8)
-        # ax3.plot(np.array([-2.,2.]),np.array([1.,1.])*FASTfree[0],'--',color='black')
-        # # ax3.plot(np.array([-2.,2.]),np.array([1.,1.])*freestreamCC[0],'--',color='C0')
+        ax2.plot(offset,FAST7,'or',color='C3')
+        ax2.plot(offset,super7,'ob',color='C0')
+        # ax2.plot(offset,FASTfree,'ok')
+        # ax2.plot(offset,freestreamCC,'og')
+        ax2.plot(np.array([-2.,2.]),np.array([1.,1.])*FASTfree[0],'--',color='black')
+        # ax2.plot(np.array([-2.,2.]),np.array([1.,1.])*freestreamCC[0],'--',color='C0')
+        ax2.set_title('7D',family='serif',fontsize=8)
+        ax2.set_xlabel('offset (D)',family='serif',fontsize=8)
+
+        ax3.plot(offset,FAST10,'or',color='C3')
+        ax3.plot(offset,super10,'ob',color='C0')
+        # ax3.plot(offset,FASTfree,'ok')
+        # ax3.plot(offset,freestreamCC,'og')
+        ax3.set_title('10D',family='serif',fontsize=8)
+        ax3.plot(np.array([-2.,2.]),np.array([1.,1.])*FASTfree[0],'--',color='black')
+        # ax3.plot(np.array([-2.,2.]),np.array([1.,1.])*freestreamCC[0],'--',color='C0')
 
         ax1.set_ylim(0.,1.1)
-        # ax2.set_ylim(0.,1.1)
-        # ax3.set_ylim(0.,1.1)
+        ax2.set_ylim(0.,1.1)
+        ax3.set_ylim(0.,1.1)
         ax1.set_yticks((0.25,0.5,0.75,1.0,1.1))
         ax1.set_yticklabels(('0.25','0.5','0.75','1.0',''))
-        # ax2.set_yticks((0.25,0.5,0.75,1.0,1.1))
-        # ax2.set_yticklabels(('','','','',''))
-        # ax3.set_yticks((0.25,0.5,0.75,1.0,1.1))
-        # ax3.set_yticklabels(('','','','',''))
+        ax2.set_yticks((0.25,0.5,0.75,1.0,1.1))
+        ax2.set_yticklabels(('','','','',''))
+        ax3.set_yticks((0.25,0.5,0.75,1.0,1.1))
+        ax3.set_yticklabels(('','','','',''))
 
 
         ax1.set_xlim(-1.1,1.1)
-        # ax2.set_xlim(-1.1,1.1)
-        # ax3.set_xlim(-1.1,1.1)
+        ax2.set_xlim(-1.1,1.1)
+        ax3.set_xlim(-1.1,1.1)
 
         ax1.set_xticks((-1.,-0.5,0.,0.5,1.))
         ax1.set_xticklabels(('-1','-0.5','0','0.5','1'))
-        # ax2.set_xticks((-1.,-0.5,0.,0.5,1.))
-        # ax2.set_xticklabels(('-1','-0.5','0','0.5','1'))
-        # ax3.set_xticks((-1.,-0.5,0.,0.5,1.))
-        # ax3.set_xticklabels(('-1','-0.5','0','0.5','1'))
+        ax2.set_xticks((-1.,-0.5,0.,0.5,1.))
+        ax2.set_xticklabels(('-1','-0.5','0','0.5','1'))
+        ax3.set_xticks((-1.,-0.5,0.,0.5,1.))
+        ax3.set_xticklabels(('-1','-0.5','0','0.5','1'))
 
-        plt.subplots_adjust(top = 0.9, bottom = 0.2, right = 0.98, left = 0.25,
+        # plt.subplots_adjust(top = 0.9, bottom = 0.2, right = 0.98, left = 0.25,
+        #             hspace = 0, wspace = 0.1)
+        plt.subplots_adjust(top = 0.99, bottom = 0.2, right = 0.98, left = 0.1,
                     hspace = 0, wspace = 0.1)
 
         # plt.suptitle('1.5')
-        # plt.savefig('fatigue_damage7D.pdf',transparent=True)
+        plt.savefig('fatigue15.pdf',transparent=True)
         plt.show()
