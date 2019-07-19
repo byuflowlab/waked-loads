@@ -213,10 +213,18 @@ def farm_damage(turbineX,turbineY,windDirections,windFrequencies,damage_free,dam
 
     for j in range(nDirections):
             turbineXw, turbineYw = fast_calc_aep.windframe(windDirections[j], turbineX, turbineY)
-            _, sigma = get_speeds(turbineXw, turbineYw, np.array([0.]), np.array([0.]), np.array([0.]), wind_speed, TI=TI)
+            ind = np.argsort(turbineXw)
+            sortedX = np.zeros(nTurbines)
+            sortedY = np.zeros(nTurbines)
+            for k in range(nTurbines):
+                sortedX[k] = turbineXw[ind[k]]
+                sortedY[k] = turbineYw[ind[k]]
+            # _, sigma = get_speeds(turbineXw, turbineYw, np.array([0.]), np.array([0.]), np.array([0.]), wind_speed, TI=TI)
+            _, sigma = get_speeds(sortedX, sortedY, np.array([0.]), np.array([0.]), np.array([0.]), wind_speed, TI=TI)
             wake_radius = sigma*1.75
             for i in range(nTurbines):
-                    damage[i] += damage_calc.combine_damage(turbineXw,turbineYw,i,damage_free,damage_close,damage_far,rotor_diameter,wake_radius)*windFrequencies[j]
+                    # damage[i] += damage_calc.combine_damage(turbineXw,turbineYw,i,damage_free,damage_close,damage_far,rotor_diameter,wake_radius)*windFrequencies[j]
+                    damage[i] += damage_calc.combine_damage(sortedX,sortedY,np.where(ind==i)[0][0],damage_free,damage_close,damage_far,rotor_diameter,wake_radius)*windFrequencies[j]
     return damage
 
 

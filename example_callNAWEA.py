@@ -33,10 +33,10 @@ if __name__ == '__main__':
                 for j in range(len(offset)):
                         turbineX = np.array([0.,126.4*sep[i]])
                         turbineY = np.array([0.,126.4])*offset[j]
-                        # windDirections = np.array([270.,270.])
-                        # windFrequencies = np.array([0.25,0.75])
-                        windDirections = np.array([270.])
-                        windFrequencies = np.array([1.])
+                        windDirections = np.array([270.,270.])
+                        windFrequencies = np.array([0.25,0.75])
+                        # windDirections = np.array([270.])
+                        # windFrequencies = np.array([1.])
                         s = Time.time()
                         damage[j] = farm_damage(turbineX,turbineY,windDirections,windFrequencies,damage_free,damage_close,damage_far)[1]
                         print "iteration time: ", (time.time()-s)/2.

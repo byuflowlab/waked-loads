@@ -148,7 +148,8 @@ subroutine combine_damage(nTurbines,turbineX,turbineY,turb_index,damage_free,&
     ! local
     real(dp) :: unwaked, dy
     integer :: num, ti, waking, k
-    real(dp), dimension(nTurbines) :: rotor_waked, dx_dist, indices, waked_array, dx_array, down
+    integer, dimension(nTurbines) :: indices
+    real(dp), dimension(nTurbines) :: rotor_waked, dx_dist, waked_array, dx_array, down
     real(dp), parameter :: pi = 3.141592653589793_dp
 
     ti = turb_index + 1
@@ -161,6 +162,7 @@ subroutine combine_damage(nTurbines,turbineX,turbineY,turb_index,damage_free,&
 
     num = 1
     call argsort(nTurbines,dx_dist,indices)
+    ! print *, indices
 
     damage_out = 0.
 
@@ -177,6 +179,7 @@ subroutine combine_damage(nTurbines,turbineX,turbineY,turb_index,damage_free,&
 
     down = dx_array/rotor_diameter
     unwaked = 1.-SUM(waked_array)
+    ! print *, ti, "unwaked: ", unwaked
 
     do k = 1, nTurbines
         if (down(k) .NE. 0.) then
@@ -207,13 +210,15 @@ subroutine argsort(array_size,array,sorted_indices)
     real(dp), dimension(array_size), intent(in) :: array
 
     ! out
-    real(dp), dimension(array_size), intent(out) :: sorted_indices
+    integer, dimension(array_size), intent(out) :: sorted_indices
 
     ! local
     integer :: i, j, rank
 
 
     sorted_indices = 0.0d0
+
+    ! print *, 'array size ', array_size
 
     do i = 1, array_size
         rank = 1
@@ -222,7 +227,10 @@ subroutine argsort(array_size,array,sorted_indices)
                 rank = rank + 1
             end if
         end do
+        ! print *, rank
         sorted_indices(i) = rank
     end do
+
+    ! print *, sorted_indices
 
 end subroutine argsort

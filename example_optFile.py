@@ -10,7 +10,6 @@ import fast_calc_aep
 import constraints
 from calc_fatigue_NAWEA import *
 import time
-import os
 
 sys.dont_write_bytecode = True
 
@@ -89,6 +88,61 @@ def obj_func(xdict):
     return funcs, fail
 
 
+def final_call(xdict):
+    global windDirections
+    global windSpeeds
+    global windFrequencies
+    global boundaryVertices
+    global boundaryNormals
+    global damage_free
+    global damage_close
+    global damage_far
+
+
+    turbineX = xdict['turbineX']
+    turbineY = xdict['turbineY']
+
+    """turbine definition"""
+    turbineZ = np.ones_like(turbineX)*90.
+    rotorDiameter = np.ones_like(turbineX)*126.4
+    shearExp = 0.
+    wakemodel = 2
+    relaxationFactor = 1.
+    rated_ws = 11.4
+    rated_power = 5000.
+    cut_in_speed = 3.
+    cut_out_speed = 25.
+    zref = 90.
+    z0 = 0.
+
+
+    funcs = {}
+
+    AEP = fast_calc_aep.calcaep(turbineX, turbineY, turbineZ, rotorDiameter, windDirections,
+                windSpeeds, windFrequencies, shearExp, wakemodel, relaxationFactor, rated_ws, rated_power,
+                cut_in_speed, cut_out_speed, zref, z0)
+
+
+    funcs['AEP'] = -AEP/1.E6
+
+
+    separation_squared,boundary_distances = constraints.constraints_position(turbineX,turbineY,boundaryVertices,boundaryNormals)
+
+    funcs['sep'] = (separation_squared-(126.4*2.)**2)/1.E5
+    bounds = boundary_distances
+    # funcs['sep'] = SpacingConstraint(turbineX, turbineY, rotorDiameter, minSpacing=2.0)/1.E5
+    # bounds = arbitraryBoundary(turbineX, turbineY, boundaryVertices, boundaryNormals)/1.E3
+    b = np.zeros(np.shape(bounds)[0])
+    for i in range(len(b)):
+        b[i] = min(bounds[i])
+    funcs['bound'] = b
+
+    funcs['damage'] = farm_damage(turbineX,turbineY,windDirections,windFrequencies,damage_free,damage_close,damage_far)
+    fail = False
+
+    return funcs, fail
+
+
 ## Main
 if __name__ == "__main__":
 
@@ -100,10 +154,6 @@ if __name__ == "__main__":
     global damage_free
     global damage_close
     global damage_far
-
-    folder = 'NAWEA/10_2dirs'
-    if not os.path.exists(folder):
-        os.makedirs(folder)
 
 
 
@@ -126,13 +176,9 @@ if __name__ == "__main__":
     windSpeeds = np.array([8.,8.])
     windFrequencies = np.array([0.5,0.5])
 
-    # windDirections = np.array([270.])
-    # windSpeeds = np.array([8.])
-    # windFrequencies = np.array([1.])
-
-    windDirections = np.array([0.,270.])
-    windSpeeds = np.array([8.,8.])
-    windFrequencies = np.array([0.5,0.5])
+    windDirections = np.array([270.])
+    windSpeeds = np.array([8.])
+    windFrequencies = np.array([1.])
 
     rotor_diameter = 126.4
     spacing = 3.
@@ -168,7 +214,7 @@ if __name__ == "__main__":
         locations[:, 1] = yBounds
         boundaryVertices, boundaryNormals = calculate_boundary(locations)
     elif boundary == 'amalia':
-        locations = np.loadtxt('/Users/ningrsrch/Dropbox/Projects/waked-loads/layout_amalia.txt')
+        locations = np.loadtxt('/home/flowlab/PJ/reduction/layout_amalia.txt')
         xBounds = locations[:, 0]
         yBounds = locations[:, 1]
         xBounds = xBounds - min(xBounds) - (max(xBounds)-min(xBounds))/2.
@@ -209,59 +255,65 @@ if __name__ == "__main__":
         ymax = max(yBounds)
         ymin = min(yBounds)
 
+    turbineX,turbineY = random_start(nTurbs,126.4,xmin,xmax,ymin,ymax)
 
-    num = 1000
-    # aep_array = np.zeros(num)
-    # mean_damage_array = np.zeros(num)
-    # max_damage_array = np.zeros(num)
+    """Optimization"""
+    optProb = Optimization('Wind_Farm_AEP', obj_func)
+    optProb.addObj('AEP')
 
-    for k in range(num):
-        turbineX,turbineY = random_start(nTurbs,126.4,xmin,xmax,ymin,ymax)
+    optProb.addVarGroup('turbineX', nTurbs, type='c', lower=min(xBounds), upper=max(xBounds), value=turbineX)
+    optProb.addVarGroup('turbineY', nTurbs, type='c', lower=min(yBounds), upper=max(yBounds), value=turbineY)
 
-        """Optimization"""
-        optProb = Optimization('Wind_Farm_AEP', obj_func)
-        optProb.addObj('AEP')
+    num_cons_sep = (nTurbs-1)*nTurbs/2
+    optProb.addConGroup('sep', num_cons_sep, lower=0., upper=None)
+    optProb.addConGroup('bound', nTurbs, lower=0., upper=None)
+    # optProb.addConGroup('damage', nTurbs, lower=None, upper=0.8)
 
-        optProb.addVarGroup('turbineX', nTurbs, type='c', lower=min(xBounds), upper=max(xBounds), value=turbineX)
-        optProb.addVarGroup('turbineY', nTurbs, type='c', lower=min(yBounds), upper=max(yBounds), value=turbineY)
+    opt = SNOPT()
+    opt.setOption('Scale option',0)
+    opt.setOption('Iterations limit',1000000)
 
-        num_cons_sep = (nTurbs-1)*nTurbs/2
-        optProb.addConGroup('sep', num_cons_sep, lower=0., upper=None)
-        optProb.addConGroup('bound', nTurbs, lower=0., upper=None)
-        # optProb.addConGroup('damage', nTurbs, lower=None, upper=0.8)
+    opt.setOption('Summary file','summary.out')
+    opt.setOption('Major optimality tolerance',1.e-5)
+    opt.setOption('Major feasibility tolerance',1.e-6)
 
-        opt = SNOPT()
-        opt.setOption('Scale option',0)
-        opt.setOption('Iterations limit',1000000)
+    res = opt(optProb)
 
-        opt.setOption('Summary file','summary.out')
-        opt.setOption('Major optimality tolerance',1.e-5)
-        opt.setOption('Major feasibility tolerance',1.e-6)
+    x = res.xStar['turbineX']
+    y = res.xStar['turbineY']
 
-        res = opt(optProb)
+    print 'x: ', x
 
-        x = res.xStar['turbineX']
-        y = res.xStar['turbineY']
+    input = {'turbineX':x,'turbineY':y}
+    funcs,_ = final_call(input)
 
-        input = {'turbineX':x,'turbineY':y}
-        funcs,_ = obj_func(input)
+    separation = min(funcs['sep'])
+    boundary = min(funcs['bound'])
+    AEP = -funcs['AEP']
 
-        separation = min(funcs['sep'])
-        boundary = min(funcs['bound'])
-        AEP = -funcs['AEP']
-        damage = funcs['damage']
+    print 'separation: ', separation
+    print 'boundary: ', boundary
+    print 'AEP: ', AEP
+    print 'damage: ', funcs['damage']
 
-        tol = 1.E-4
-        if separation > -tol and boundary > -tol:
+    # int = np.argsort(x)
+    # sortedX = np.zeros(len(x))
+    # sortedY = np.zeros(len(y))
+    # for k in range(len(x)):
+    #     sortedX[k] = x[int[k]]
+    #     sortedY[k] = y[int[k]]
 
-            file = open('%s/AEP.txt'%folder, 'a')
-            file.write('%s'%(AEP) + '\n')
-            file.close()
+    for i in range(len(x)):
+        circ = plt.Circle((x[i],y[i]), 126.4/2.,facecolor='blue',edgecolor='blue',alpha=0.5)
+        plt.gca().add_patch(circ)
+        plt.text(x[i],y[i],'%s'%(i+1))
 
-            file = open('%s/meanDamage.txt'%folder, 'a')
-            file.write('%s'%(np.mean(damage)) + '\n')
-            file.close()
+    plt.xlim(-3000.,3000.)
+    plt.axis('equal')
 
-            file = open('%s/maxDamage.txt'%folder, 'a')
-            file.write('%s'%(np.max(damage)) + '\n')
-            file.close()
+    bx = boundaryVertices[:,0]
+    by = boundaryVertices[:,1]
+    bx = np.append(bx,bx[0])
+    by = np.append(by,by[0])
+    plt.plot(bx,by,'--k')
+    plt.show()
