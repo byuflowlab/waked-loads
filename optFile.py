@@ -8,7 +8,7 @@ import os
 import sys
 import fast_calc_aep
 import constraints
-from calc_fatigue_exp import *
+from calc_fatigue_fast import *
 import time
 
 sys.dont_write_bytecode = True
@@ -42,12 +42,6 @@ def obj_func(xdict):
     global atm_free
     global atm_close
     global atm_far
-    global Omega_free
-    global Omega_waked
-    global free_speed
-    global waked_speed
-    global N
-    global TI
 
 
     turbineX = xdict['turbineX']
@@ -87,12 +81,8 @@ def obj_func(xdict):
     for i in range(len(b)):
         b[i] = min(bounds[i])
     funcs['bound'] = b
-
-
-    s = time.time()
-    damage = farm_damage(turbineX,turbineY,windDirections,windFrequencies,atm_free,atm_close,atm_far,Omega_free,Omega_waked,free_speed,waked_speed,TI=TI,N=N)
-    print 'time to run fatigue calc: ', time.time()-s
-    print 'damage: ', damage
+    
+    funcs['damage'] = farm_damage(turbineX,turbineY,windDirections,windFrequencies,atm_free,atm_close,atm_far)
 
     fail = False
 
@@ -110,12 +100,6 @@ if __name__ == "__main__":
     global atm_free
     global atm_close
     global atm_far
-    global Omega_free
-    global Omega_waked
-    global free_speed
-    global waked_speed
-    global N
-    global TI
 
 
 
@@ -123,12 +107,10 @@ if __name__ == "__main__":
     filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
     filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
 
-    N=24001
-    TI = 0.11
     print 'setup fatigue model'
-    atm_free,atm_close,atm_far,Omega_free,Omega_waked,free_speed,waked_speed = setup_atm(filename_free,filename_close,filename_far,TI=TI,N=N)
-
-
+    s = time.time()
+    atm_free,atm_close,atm_far = extract_moments(filename_free,filename_close,filename_far)
+    print 'setup time: ', time.time()-s
 
     print 'running optimization'
 
@@ -252,6 +234,7 @@ if __name__ == "__main__":
     print 'separation: ', separation
     print 'boundary: ', boundary
     print 'AEP: ', AEP
+    print 'damage: ', funcs['damage']
 
     for i in range(len(x)):
         circ = plt.Circle((x[i],y[i]), 126.4/2.,facecolor='blue',edgecolor='blue',alpha=0.5)

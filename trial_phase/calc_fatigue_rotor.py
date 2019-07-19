@@ -319,6 +319,7 @@ def setup_atm(filename_free,filename_close,filename_far,TI=0.11,N=24001):
         time = lines[:,0]
         my = lines[:,12]
         a = lines[:,5]
+        Omega_waked10 = np.mean(lines[:,6])
         time = time-time[0]
 
         m_far = interp1d(time, my, kind='linear')
@@ -355,7 +356,7 @@ def setup_atm(filename_free,filename_close,filename_far,TI=0.11,N=24001):
                 #waked close
                 x_locs,y_locs,z_locs = findXYZ(turbineX_close[1],turbineY_waked[1],90.,r,yaw_deg,az)
                 speeds, _ = get_speeds(turbineX_close, turbineY_waked, x_locs, y_locs, z_locs, wind_speed,TI=TI)
-                ccblade_close[i], _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega_free,pitch,azimuth=az)
+                ccblade_close[i], _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega_waked10,pitch,azimuth=az)
 
                 #waked far
                 x_locs,y_locs,z_locs = findXYZ(turbineX_far[1],turbineY_waked[1],90.,r,yaw_deg,az)
@@ -448,7 +449,7 @@ def get_loads_history(turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_s
     pos = np.linspace(0.,Omega*10.*360.,N)%360.
 
     _, sigma = get_speeds(turbineX, turbineY, np.array([0.]), np.array([0.]), np.array([0.]), wind_speed, TI=TI)
-    wake_radius = sigma*1.
+    wake_radius = sigma*1.75
 
     rotor_waked = np.zeros(nTurbines)
     dx_dist = np.zeros(nTurbines)
@@ -772,7 +773,7 @@ def new_get_cc_loads(turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_sp
 
 def new_damage_atm(turbineX,turbineY,turb_index,atm_free,atm_close,atm_far,cc_mean,freq,TI=0.11,wind_speed=8.,rotor_diameter=126.4):
     _, sigma = get_speeds(turbineX, turbineY, np.array([0.]), np.array([0.]), np.array([0.]), wind_speed, TI=TI)
-    wake_radius = sigma*2.
+    wake_radius = sigma*3.
 
     nTurbines = len(turbineX)
 

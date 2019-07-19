@@ -85,19 +85,51 @@ end subroutine amount_waked
 
 
 
+subroutine rotor_amount_waked(dy,wake_radius,rotor_diameter,amnt_waked)
+
+    implicit none
+
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+    ! in
+    real(dp), intent(in) :: dy, wake_radius, rotor_diameter
+    ! out
+    real(dp), intent(out) :: amnt_waked
+
+    ! local
+    real(dp) :: R, a_wake, a_turb, p1, p2, p3, dy_abs
+    real(dp), parameter :: pi = 3.141592653589793_dp
+
+    R = wake_radius
+
+    dy_abs = ABS(dy)
+
+    if (dy_abs > (R+(rotor_diameter/2.))) then
+        amnt_waked = 0.
+    else if ((dy_abs+(rotor_diameter/2.)) < R .AND. (rotor_diameter/2.) < R) then
+        amnt_waked = 1.
+    else if ((dy_abs+R) < (rotor_diameter/2.) .AND. (rotor_diameter/2.) > R) then
+        a_wake = pi*R**2
+        a_turb = pi*(rotor_diameter/2.)**2
+        amnt_waked = a_wake/a_turb
+    else if (R == 0.) then
+        amnt_waked = 0.
+    else
+        p1 = (rotor_diameter/2.)**2*ACOS((dy_abs**2+(rotor_diameter/2.)**2-R**2)/ &
+                        & (2.*dy_abs*(rotor_diameter/2.)))
+        p2 = R**2*ACOS((dy_abs**2+R**2-(rotor_diameter/2.)**2)/(2.*dy_abs*R))
+        p3 = -0.5*SQRT((-dy_abs+(rotor_diameter/2.)+R)*(dy_abs+(rotor_diameter/2.)-R)* &
+                        & (dy_abs-(rotor_diameter/2.)+R)*(dy_abs+(rotor_diameter/2.)+R))
+        a_turb = pi*(rotor_diameter/2.)**2
+        amnt_waked = (p1+p2+p3)/a_turb
+    end if
+
+end subroutine rotor_amount_waked
 
 
 
-
-
-
-
-
-
-
-
-
-subroutine get_loads_history(nTurbines,NFast,NCC,turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_speed,waked_speed,f_atm_free,f_atm_close,f_atm_far)
+subroutine combine_damage(nTurbines,turbineX,turbineY,turb_index,damage_free,&
+                    & damage_close,damage_far,rotor_diameter,wake_radius,damage_out)
 
     implicit none
 
@@ -105,149 +137,92 @@ subroutine get_loads_history(nTurbines,NFast,NCC,turbineX,turbineY,turb_index,Om
     integer, parameter :: dp = kind(0.d0)
 
     ! in
-    integer, intent(in) :: nTurbines, NFast, NCC, turb_index
+    integer, intent(in) :: nTurbines, turb_index
     real(dp), dimension(nTurbines), intent(in) :: turbineX, turbineY
-    real(dp), dimension(N), intent(in) :: atm_free, atm_close, atm_far
-    real(dp), intent(in) :: Omega_free, Omega_waked, free_speed, waked_speed
+    real(dp), dimension(nTurbines,nTurbines), intent(in) :: wake_radius
+    real(dp), intent(in) :: damage_free, damage_close, damage_far, rotor_diameter
 
     ! out
-    real(dp), dimension(N), intent(out) :: moments
+    real(dp), intent(out) :: damage_out
 
     ! local
-    ! real(dp) :: r, m, az_rad, b, d, dist, x1, x2, y1, y2, az_mod, d1, d2
-    ! real(dp), dimension(3) :: p
-    ! real(dp), dimension(2) :: dir_blade, dir_intersect1, dir_intersect2
-    ! real(dp), parameter :: pi = 3.141592653589793_dp
+    real(dp) :: unwaked, dy
+    integer :: num, ti, waking, k
+    real(dp), dimension(nTurbines) :: rotor_waked, dx_dist, indices, waked_array, dx_array, down
+    real(dp), parameter :: pi = 3.141592653589793_dp
 
+    ti = turb_index + 1
 
-end subroutine get_loads_history
+    do waking = 1, nTurbines
+        dx_dist(waking) = turbineX(ti)-turbineX(waking)
+        dy = turbineY(ti)-turbineY(waking)
+        call rotor_amount_waked(dy,wake_radius(ti,waking),rotor_diameter,rotor_waked(waking))
+    end do
 
-def get_loads_history(turbineX,turbineY,turb_index,Omega_free,Omega_waked,free_speed,waked_speed,f_atm_free,f_atm_close,f_atm_far,N=24001,TI=0.11,wind_speed=8.,rotor_diameter=126.4):
+    num = 1
+    call argsort(nTurbines,dx_dist,indices)
 
+    damage_out = 0.
 
-    Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
-    angles = np.linspace(0.,360.,100)
-    ccblade_moments = np.zeros_like(angles)
+    waked_array = 0.0d0
+    dx_array = 0.0d0
 
-    # print 'getting CCBlade moments'
-    """CCBlade moments"""
-    s = Time.time()
-    for i in range(len(ccblade_moments)):
-        az = angles[i]
-        x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],90.,r,yaw_deg,az)
-        speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, wind_speed,TI=TI)
+    do waking = 1, nTurbines
+        if (dx_dist(indices(waking)) > 0. .AND. rotor_waked(indices(waking)) > SUM(waked_array(1:num))) then
+            waked_array(num) = rotor_waked(indices(waking))-SUM(waked_array(1:num))
+            dx_array(num) = dx_dist(indices(waking))
+            num = num + 1
+        end if
+    end do
 
-        if i == 0:
-            actual_speed = get_eff_turbine_speeds(turbineX, turbineY, wind_speed,TI=TI)[1]
-            Omega = (Omega_waked + (Omega_free-Omega_waked)/(free_speed-waked_speed) * (actual_speed-waked_speed))
+    down = dx_array/rotor_diameter
+    unwaked = 1.-SUM(waked_array)
 
-        ccblade_moments[i], _ = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=az)
+    do k = 1, nTurbines
+        if (down(k) .NE. 0.) then
+            if (down(k) < 4.) then
+                  damage_out = damage_out + damage_close*waked_array(k)
+            else if (down(k) > 10.) then
+                  damage_out = damage_out + damage_far*waked_array(k)
+            else
+                  damage_out = damage_out + ((damage_close*(10.-down(k))/6.)+(damage_far*(down(k)-4.)/6.))*waked_array(k)
+            end if
+        end if
+    end do
 
-    f_ccblade = interp1d(angles, ccblade_moments/1000., kind='linear')
-    # print 'loop 1: ', Time.time()-s
+    damage_out = damage_out + damage_free*unwaked
 
-    pos = np.linspace(0.,Omega*10.*360.,N)%360.
-
-    """amount waked"""
-    _, sigma = get_speeds(turbineX, turbineY, np.array([0.]), np.array([0.]), np.array([0.]), wind_speed, TI=TI)
-    wake_radius = sigma*1.75
-
-    waked_amount = np.zeros((nTurbines,N))
-    dx_dist = np.zeros(nTurbines)
-
-
-
-
-    for waking in range(nTurbines):
-        dx = turbineX[turb_index]-turbineX[waking]
-        dy = turbineY[turb_index]-turbineY[waking]
-        dx_dist[waking] = dx
-        amnt_waked = np.zeros(len(angles))
-        for i in range(len(angles)):
-            if dx > 0.:
-                amnt_waked[i] = damage_calc.amount_waked(dy,wake_radius[turb_index][waking],rotor_diameter,angles[i])
-
-        waked_func = interp1d(angles, amnt_waked, kind='linear')
-        waked_amount[waking,:] = waked_func(pos)
-        # print waked_func(pos)
+end subroutine combine_damage
 
 
 
+subroutine argsort(array_size,array,sorted_indices)
+    implicit none
+
+    ! define precision to be the standard for a double precision ! on local system
+    integer, parameter :: dp = kind(0.d0)
+
+    ! in
+    integer, intent(in) :: array_size
+    real(dp), dimension(array_size), intent(in) :: array
+
+    ! out
+    real(dp), dimension(array_size), intent(out) :: sorted_indices
+
+    ! local
+    integer :: i, j, rank
 
 
-    t = np.linspace(0.,600.,N)
-    dt = t[1]-t[0]
+    sorted_indices = 0.0d0
 
-    s = Time.time()
+    do i = 1, array_size
+        rank = 1
+        do j = 1, array_size
+            if (array(j) < array(i)) then
+                rank = rank + 1
+            end if
+        end do
+        sorted_indices(i) = rank
+    end do
 
-
-    moments = f_ccblade(pos)
-    # moments = np.zeros(N)
-
-    for i in range(N):
-        # print '1'
-        # s = Time.time()
-
-        # amnt_waked = np.zeros(nTurbines)
-        # dx_dist = np.zeros(nTurbines)
-        # for waking in range(nTurbines):
-        #     dx = turbineX[turb_index]-turbineX[waking]
-        #     dy = turbineY[turb_index]-turbineY[waking]
-        #     dx_dist[waking] = dx
-        #     if dx < 0.:
-        #         amnt_waked[waking] = 0.
-        #     else:
-        #         amnt_waked[waking] = amount_waked(dy,wake_radius[turb_index][waking],rotor_diameter,pos[i])
-
-
-        # print i
-        # print waked_array[:,i]
-        # print 'shape: ', np.shape(waked_array)
-        amnt_waked = waked_amount[:,i]
-
-
-
-        waked_array = np.zeros(nTurbines)
-        dx_array = np.zeros(nTurbines)
-
-        # print 'loop 2: ', Time.time()-s
-        # print '2'
-        s = Time.time()
-
-        num = 0
-        indices = np.argsort(dx_dist)
-        for waking in range(nTurbines):
-            if dx_dist[indices[waking]] > 0.:
-                if amnt_waked[indices[waking]] > np.sum(waked_array[0:num]):
-                    waked_array[num] = amnt_waked[indices[waking]]-np.sum(waked_array[0:num])
-                    dx_array[num] = dx_dist[indices[waking]]
-                    num += 1
-
-        # print Time.time()-s
-        # print '3'
-        s = Time.time()
-
-        down = dx_array/rotor_diameter
-
-        # moments[i] = f_ccblade(pos[i])
-
-        unwaked = 1.-np.sum(waked_array)
-        # print 'unwaked', unwaked
-        for k in range(np.count_nonzero(waked_array)):
-            if down[k] < 4.:
-                  moments[i] += f_atm_close(t[i])*waked_array[k]
-                  # moments[i] += atm_close[i]*waked_array[k]
-            elif down[k] > 10.:
-                  moments[i] += f_atm_far(t[i])*waked_array[k]
-            else:
-                  moments[i] += (f_atm_close(t[i])*(10.-down[k])/6.+f_atm_far(t[i])*(down[k]-4.)/6.)*waked_array[k]
-        # print Time.time()-s
-        moments[i] += f_atm_free(t[i])*unwaked
-
-        # print 'pos: ', pos[i]
-        # print 'position: ', position
-        # position = (position+(Omega*(dt)/60.)*360.)%360.
-
-    # print 'loop 2: ', Time.time()-s
-
-    return moments
+end subroutine argsort
