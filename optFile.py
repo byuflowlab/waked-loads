@@ -84,6 +84,7 @@ def obj_func(xdict):
     funcs['bound'] = b
 
     funcs['damage'] = farm_damage(turbineX,turbineY,windDirections,windFrequencies,damage_free,damage_close,damage_far)
+    # funcs['damage'] = np.max(farm_damage(turbineX,turbineY,windDirections,windFrequencies,damage_free,damage_close,damage_far))
     fail = False
 
     return funcs, fail
@@ -101,7 +102,8 @@ if __name__ == "__main__":
     global damage_close
     global damage_far
 
-    folder = 'NAWEA/10_2dirs'
+    folder = 'NAWEA/10_2dirs_cons74'
+    # folder = 'NAWEA/10_2dirs_minDamage'
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -116,15 +118,19 @@ if __name__ == "__main__":
     damage_free,damage_close,damage_far = extract_damage(filename_free,filename_close,filename_far)
     print 'setup time: ', time.time()-s
 
+    print 'damage_free: ', damage_free
+    print 'damage_close: ', damage_close
+    print 'damage_far: ', damage_far
+
     print 'running optimization'
 
     nTurbs = 10
 
     # windDirections, windFrequencies, windSpeeds = northIslandRose(30)
 
-    windDirections = np.array([270.,180.])
-    windSpeeds = np.array([8.,8.])
-    windFrequencies = np.array([0.5,0.5])
+    # windDirections = np.array([270.,180.])
+    # windSpeeds = np.array([8.,8.])
+    # windFrequencies = np.array([0.5,0.5])
 
     # windDirections = np.array([270.])
     # windSpeeds = np.array([8.])
@@ -221,6 +227,7 @@ if __name__ == "__main__":
         """Optimization"""
         optProb = Optimization('Wind_Farm_AEP', obj_func)
         optProb.addObj('AEP')
+        # optProb.addObj('damage')
 
         optProb.addVarGroup('turbineX', nTurbs, type='c', lower=min(xBounds), upper=max(xBounds), value=turbineX)
         optProb.addVarGroup('turbineY', nTurbs, type='c', lower=min(yBounds), upper=max(yBounds), value=turbineY)
@@ -228,7 +235,7 @@ if __name__ == "__main__":
         num_cons_sep = (nTurbs-1)*nTurbs/2
         optProb.addConGroup('sep', num_cons_sep, lower=0., upper=None)
         optProb.addConGroup('bound', nTurbs, lower=0., upper=None)
-        # optProb.addConGroup('damage', nTurbs, lower=None, upper=0.8)
+        optProb.addConGroup('damage', nTurbs, lower=None, upper=0.74)
 
         opt = SNOPT()
         opt.setOption('Scale option',0)
@@ -252,7 +259,8 @@ if __name__ == "__main__":
         damage = funcs['damage']
 
         tol = 1.E-4
-        if separation > -tol and boundary > -tol:
+        if separation > -tol and boundary > -tol and max(damage) < 0.74+tol:
+        # if separation > -tol and boundary > -tol:
 
             file = open('%s/AEP.txt'%folder, 'a')
             file.write('%s'%(AEP) + '\n')
@@ -265,3 +273,7 @@ if __name__ == "__main__":
             file = open('%s/maxDamage.txt'%folder, 'a')
             file.write('%s'%(np.max(damage)) + '\n')
             file.close()
+
+            # file = open('%s/maxDamage.txt'%folder, 'a')
+            # file.write('%s'%damage + '\n')
+            # file.close()

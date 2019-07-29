@@ -221,7 +221,7 @@ def farm_damage(turbineX,turbineY,windDirections,windFrequencies,damage_free,dam
                 sortedY[k] = turbineYw[ind[k]]
             # _, sigma = get_speeds(turbineXw, turbineYw, np.array([0.]), np.array([0.]), np.array([0.]), wind_speed, TI=TI)
             _, sigma = get_speeds(sortedX, sortedY, np.array([0.]), np.array([0.]), np.array([0.]), wind_speed, TI=TI)
-            wake_radius = sigma*1.75
+            wake_radius = sigma*2.
             for i in range(nTurbines):
                     # damage[i] += damage_calc.combine_damage(turbineXw,turbineYw,i,damage_free,damage_close,damage_far,rotor_diameter,wake_radius)*windFrequencies[j]
                     damage[i] += damage_calc.combine_damage(sortedX,sortedY,np.where(ind==i)[0][0],damage_free,damage_close,damage_far,rotor_diameter,wake_radius)*windFrequencies[j]
