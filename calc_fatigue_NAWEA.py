@@ -55,6 +55,7 @@ def get_damage(moments,freq,fos=3):
     d = 0.
     R = 0.5 #root cylinder radius
     I = 0.25*np.pi*R**4
+    I = 0.25*np.pi*(R**4-(R-0.08)**4)
 
     #go from moments to stresses
     sigma = moments*R/I

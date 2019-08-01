@@ -2,20 +2,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from zz_calc_fatigue import *
-import damage_calc
+# from zz_calc_fatigue import *
+# from calc_fatigue_NAWEA import *
+from zz_edgewise_model import *
+# import damage_calc
 
 
 if __name__ == '__main__':
 
       sep = np.array([4.,7.,10.])
       offset = np.array([-1.,-0.75,-0.5,-0.25,0.,0.25,0.5,0.75,1.])
-      sep = np.array([4.])
-      offset = np.array([0.])
-      TI = 11.0
-      freestream = False
+      # sep = np.array([4.])
+      # offset = np.array([0.5])
+      TI = 11.
+      freestream = True
       for i in range(len(sep)):
             damage = np.zeros_like(offset)
+            di = np.zeros_like(offset)
             for j in range(len(offset)):
                   if freestream == True:
                           if TI == 11.:
@@ -148,13 +151,33 @@ if __name__ == '__main__':
                   my = lines[:,12]
                   mx = lines[:,11]
 
-                  mx = np.zeros_like(mx)
-                  damage[j] = calc_damage_moments(my,mx,1.0)
-                  # new_calc_damage(my,mx,1.0)
-                  print damage[j]
+                  # plt.plot(my)
+                  # plt.plot(mx)
+                  # plt.show()
 
+                  # mx = np.zeros_like(mx)
+                  # plt.plot(mx[0:5000])
+                  # print offset[j]
+                  # print np.max(mx)-np.min(mx)
+                  di[j] = np.max(mx)-np.min(mx)
+                  # plt.show()
+
+                  damage[j] = calc_damage_moments(my,mx,1.0,fos=2.)
+                  # damage[j] = get_damage(my,1.0,fos=2.0)
+                  # new_calc_damage(my,mx,1.0)
+                  # print damage[j]
+                  # plt.figure(1)
+                  # plt.plot(offset[j],1.2885465608898776,'or')
+
+            plt.figure(1)
+            plt.plot(offset,damage,'o')
+            # plt.figure(2)
+            # plt.plot(offset,di,'o')
             print 'separation: ', sep[i]
             print 'damage: ', repr(damage)
+      # plt.ylim(0.25,1.1)
+      plt.show()
+
 
 
 

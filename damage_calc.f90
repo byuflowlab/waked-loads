@@ -129,7 +129,7 @@ end subroutine rotor_amount_waked
 
 
 subroutine combine_damage(nTurbines,turbineX,turbineY,turb_index,damage_free,&
-                    & damage_close,damage_far,rotor_diameter,wake_radius,damage_out)
+                    & damage_close,damage_far,rotor_diameter,wake_radius,recovery_dist,damage_out)
 
     implicit none
 
@@ -140,7 +140,7 @@ subroutine combine_damage(nTurbines,turbineX,turbineY,turb_index,damage_free,&
     integer, intent(in) :: nTurbines, turb_index
     real(dp), dimension(nTurbines), intent(in) :: turbineX, turbineY
     real(dp), dimension(nTurbines,nTurbines), intent(in) :: wake_radius
-    real(dp), intent(in) :: damage_free, damage_close, damage_far, rotor_diameter
+    real(dp), intent(in) :: damage_free, damage_close, damage_far, rotor_diameter, recovery_dist
 
     ! out
     real(dp), intent(out) :: damage_out
@@ -149,7 +149,7 @@ subroutine combine_damage(nTurbines,turbineX,turbineY,turb_index,damage_free,&
     real(dp) :: unwaked, dy
     integer :: num, ti, waking, k
     integer, dimension(nTurbines) :: indices
-    real(dp), dimension(nTurbines) :: rotor_waked, dx_dist, waked_array, dx_array, down
+    real(dp), dimension(nTurbines) :: rotor_waked, dx_dist, waked_array, dx_array, down, cos_factor
     real(dp), parameter :: pi = 3.141592653589793_dp
 
     ti = turb_index + 1
@@ -158,7 +158,15 @@ subroutine combine_damage(nTurbines,turbineX,turbineY,turb_index,damage_free,&
         dx_dist(waking) = turbineX(ti)-turbineX(waking)
         dy = turbineY(ti)-turbineY(waking)
         call rotor_amount_waked(dy,wake_radius(ti,waking),rotor_diameter,rotor_waked(waking))
+
+        if (ABS(dy)+rotor_diameter/2.0 < wake_radius(ti,waking)) then
+            cos_factor(waking) = COS((abs(dy)/(wake_radius(ti,waking)-rotor_diameter/2.0))*pi/2.0)
+        else
+            cos_factor(waking) = 0.
+        end if
     end do
+
+    ! print *, cos_factor
 
     num = 1
     call argsort(nTurbines,dx_dist,indices)
@@ -185,12 +193,16 @@ subroutine combine_damage(nTurbines,turbineX,turbineY,turb_index,damage_free,&
         if (down(k) .NE. 0.) then
             if (down(k) < 4.) then
                   damage_out = damage_out + damage_close*waked_array(k)
-            else if (down(k) > 10.) then
-                  damage_out = damage_out + damage_far*waked_array(k)
+            else if (down(k) > recovery_dist) then
+                  damage_out = damage_out + damage_free*waked_array(k)
+            else if (down(k) >= 10. .AND. down(k) <= recovery_dist) then
+                  damage_out = damage_out + (damage_far*(recovery_dist-down(k))/(recovery_dist-10.)&
+                        &+damage_free*(down(k)-10.)/(recovery_dist-10.))*waked_array(k)
             else
                   damage_out = damage_out + ((damage_close*(10.-down(k))/6.)+(damage_far*(down(k)-4.)/6.))*waked_array(k)
             end if
         end if
+        damage_out = damage_out + 0.01*cos_factor(k)
     end do
 
     damage_out = damage_out + damage_free*unwaked

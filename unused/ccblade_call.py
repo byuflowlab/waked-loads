@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     import os
     afinit = CCAirfoil.initFromAerodynFile  # just for shorthand
-    basepath = '5MW_AFFiles' + os.path.sep
+    basepath = '/Users/ningrsrch/Dropbox/Projects/waked-loads/5MW_AFFiles' + os.path.sep
 
     # load all airfoils
     airfoil_types = [0]*8

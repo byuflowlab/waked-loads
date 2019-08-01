@@ -68,6 +68,12 @@ def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSect
     x = L(rad)*(rad-loc)
     M_edge = np.trapz(x,x=rad)
 
+    """add gravity loads"""
+    blade_mass = 17536.617
+    blade_cm = 20.650
+    grav = 9.81
+    M_edge += np.sin(np.deg2rad(azimuth))*blade_mass*grav*blade_cm
+
     return M_flap,M_edge
 
 
@@ -247,91 +253,91 @@ if __name__ == '__main__':
     #                                     hubHt,nSector,Omega,pitch)
     # print M
 
-    import matplotlib.pyplot as plt
-    fig = plt.figure(figsize=(15,5))
-    ax1 = plt.subplot(131)
-    ax2 = plt.subplot(132)
-    ax3 = plt.subplot(133)
-
-
-    az = np.linspace(0.,720.*5,300)
-    for i in range(100):
-        ax1.cla()
-        ax2.cla()
-        ax3.cla()
-        ax1.axis('off')
-        ax2.axis('off')
-        ax3.axis('off')
-        ax1.axis('square')
-        ax2.axis('square')
-        ax3.axis('square')
-        ax1.set_ylim(-70.,70.)
-        ax2.set_ylim(30.,170.)
-        ax3.set_ylim(30.,170.)
-        ax1.set_xlim(-10.,10.)
-        ax2.set_xlim(-10.,10.)
-        ax3.set_xlim(70.,-70.)
-
-        azimuth_deg = az[i]
-        yaw_deg = 0.
-        x_locs,y_locs,z_locs = findXYZ(0.,0.,100.,r,yaw_deg,azimuth_deg)
-
-
-        if az[i]%360 < 90. or az[i]%360 > 270.:
-            ax1.plot(0.,0.,'ob',markersize=15)
-        if az[i]%360 < 180.:
-            ax2.plot(0.,100.,'ob',markersize=15)
-        ax3.plot(0.,100.,'ob',markersize=15)
-
-        ax1.plot(x_locs,y_locs,'or')
-        ax2.plot(x_locs,z_locs,'or')
-        ax3.plot(y_locs,z_locs,'or')
-
-
-        if az[i]%360 > 90. and az[i]%360 < 270.:
-            ax1.plot(0.,0.,'ob',markersize=15)
-        if az[i]%360 > 180.:
-            ax2.plot(0.,100.,'ob',markersize=15)
-
-
-        plt.pause(0.01)
-
-    # turbineX = np.array([0.,504.])
-    # turbineY = np.array([0.,126.])
-    # wind_speed = 8.
-    #
-    # x1,y1,x2,y2 = findXY(turbineX[0],turbineY[0],r,0.)
-    # speeds1 = get_speeds(turbineX, turbineY, x1, y1, wind_speed)
-    # speeds2 = get_speeds(turbineX, turbineY, x2, y2, wind_speed)
-    # M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
-    # M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
-    #
-    # print M1_flap-M2_flap
-    # print M1_edge-M2_edge
-    #
-    # x1,y1,x2,y2 = findXY(turbineX[1],turbineY[1],r,0.)
-    # speeds1 = get_speeds(turbineX, turbineY, x1, y1, wind_speed)
-    # speeds2 = get_speeds(turbineX, turbineY, x2, y2, wind_speed)
-    # M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
-    # M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
-    #
-    # print M1_flap-M2_flap
-    # print M1_edge-M2_edge
+    # import matplotlib.pyplot as plt
+    # fig = plt.figure(figsize=(15,5))
+    # ax1 = plt.subplot(131)
+    # ax2 = plt.subplot(132)
+    # ax3 = plt.subplot(133)
     #
     #
-    # # import matplotlib.pyplot as plt
-    # # plt.plot(x1,y1,'o',color='C0')
-    # # plt.plot(x2,y2,'o',color='C0')
-    # # plt.plot(0.,0.,'o',color='C1')
-    # # plt.axis('equal')
-    # # plt.show()
+    # az = np.linspace(0.,720.*5,300)
+    # for i in range(100):
+    #     ax1.cla()
+    #     ax2.cla()
+    #     ax3.cla()
+    #     ax1.axis('off')
+    #     ax2.axis('off')
+    #     ax3.axis('off')
+    #     ax1.axis('square')
+    #     ax2.axis('square')
+    #     ax3.axis('square')
+    #     ax1.set_ylim(-70.,70.)
+    #     ax2.set_ylim(30.,170.)
+    #     ax3.set_ylim(30.,170.)
+    #     ax1.set_xlim(-10.,10.)
+    #     ax2.set_xlim(-10.,10.)
+    #     ax3.set_xlim(70.,-70.)
     #
-    # # plt.plot(locs,M)
-    # # plt.show()
+    #     azimuth_deg = az[i]
+    #     yaw_deg = 0.
+    #     x_locs,y_locs,z_locs = findXYZ(0.,0.,100.,r,yaw_deg,azimuth_deg)
     #
-    # # plt.plot(r, Tp/1e3, 'k', label='lead-lag')
-    # # plt.plot(r, Np/1e3, 'r', label='flapwise')
-    # # plt.xlabel('blade fraction')
-    # # plt.ylabel('distributed aerodynamic loads (kN)')
-    # # plt.legend(loc='upper left')
-    # # plt.show()
+    #
+    #     if az[i]%360 < 90. or az[i]%360 > 270.:
+    #         ax1.plot(0.,0.,'ob',markersize=15)
+    #     if az[i]%360 < 180.:
+    #         ax2.plot(0.,100.,'ob',markersize=15)
+    #     ax3.plot(0.,100.,'ob',markersize=15)
+    #
+    #     ax1.plot(x_locs,y_locs,'or')
+    #     ax2.plot(x_locs,z_locs,'or')
+    #     ax3.plot(y_locs,z_locs,'or')
+    #
+    #
+    #     if az[i]%360 > 90. and az[i]%360 < 270.:
+    #         ax1.plot(0.,0.,'ob',markersize=15)
+    #     if az[i]%360 > 180.:
+    #         ax2.plot(0.,100.,'ob',markersize=15)
+    #
+    #
+    #     plt.pause(0.01)
+
+    turbineX = np.array([0.,504.])
+    turbineY = np.array([0.,126.])
+    wind_speed = 8.
+
+    x1,y1,x2,y2 = findXY(turbineX[0],turbineY[0],r,0.)
+    speeds1 = get_speeds(turbineX, turbineY, x1, y1, wind_speed)
+    speeds2 = get_speeds(turbineX, turbineY, x2, y2, wind_speed)
+    M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
+    M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
+
+    print M1_flap-M2_flap
+    print M1_edge-M2_edge
+
+    x1,y1,x2,y2 = findXY(turbineX[1],turbineY[1],r,0.)
+    speeds1 = get_speeds(turbineX, turbineY, x1, y1, wind_speed)
+    speeds2 = get_speeds(turbineX, turbineY, x2, y2, wind_speed)
+    M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
+    M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
+
+    print M1_flap-M2_flap
+    print M1_edge-M2_edge
+
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(x1,y1,'o',color='C0')
+    # plt.plot(x2,y2,'o',color='C0')
+    # plt.plot(0.,0.,'o',color='C1')
+    # plt.axis('equal')
+    # plt.show()
+
+    # plt.plot(locs,M)
+    # plt.show()
+
+    # plt.plot(r, Tp/1e3, 'k', label='lead-lag')
+    # plt.plot(r, Np/1e3, 'r', label='flapwise')
+    # plt.xlabel('blade fraction')
+    # plt.ylabel('distributed aerodynamic loads (kN)')
+    # plt.legend(loc='upper left')
+    # plt.show()
