@@ -61,6 +61,11 @@ def find_omega(filename_free,filename_close,filename_far,TI=0.11,wind_speed=8.):
         close_speed = get_eff_turbine_speeds(turbineX_close, turbineY_waked, wind_speed,TI=TI)[1]
         far_speed = get_eff_turbine_speeds(turbineX_far, turbineY_waked, wind_speed,TI=TI)[1]
 
+        print 'tip speed ratios'
+        print 'free: ', Omega_free*126.4/2./free_speed
+        print 'close: ', Omega_close*126.4/2./close_speed
+        print 'far: ', Omega_far*126.4/2./far_speed
+
         # return flap_free_atm, edge_free_atm, Omega_free, free_speed, flap_close_atm, edge_close_atm, Omega_close, close_speed, flap_far_atm, edge_far_atm, Omega_far, far_speed
         return Omega_free, free_speed, Omega_close, close_speed, Omega_far, far_speed
 
@@ -127,23 +132,38 @@ def make_edge_loads(upper,lower,Omega,N=24001,duration=10.):
         return m
 
 
-def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,wind_speed=8.0,TI=0.11,factor=1.0):
+def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,wind_speed=8.0,TI=0.11):
 
+        s = Time.time()
         Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
+        print 'setup airfoil: ', Time.time()-s
 
         az = 90.
+        s = Time.time()
         x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],hubHt,r,yaw_deg,az)
+        print 'find XYZ 1: ', Time.time()-s
+        s = Time.time()
         speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, wind_speed,TI=TI)
-        mean_speed = np.mean(speeds)
-        speeds = factor*(speeds-mean_speed)+mean_speed
+        print 'get speeds 1: ', Time.time()-s
+        s = Time.time()
+        # mean_speed = np.mean(speeds)
+        # speeds = factor*(speeds-mean_speed)+mean_speed
         _, edge90 = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,wind_speed,pitch,azimuth=az)
+        print 'calc moment 1: ', Time.time()-s
+        s = Time.time()
 
         az = 270.
         x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],hubHt,r,yaw_deg,az)
+        print 'find XYZ 2: ', Time.time()-s
+        s = Time.time()
         speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, wind_speed,TI=TI)
-        mean_speed = np.mean(speeds)
-        speeds = factor*(speeds-mean_speed)+mean_speed
+        print 'get speeds 2: ', Time.time()-s
+        s = Time.time()
+        # mean_speed = np.mean(speeds)
+        # speeds = factor*(speeds-mean_speed)+mean_speed
         _, edge270 = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,wind_speed,pitch,azimuth=az)
+        print 'calc moment 2: ', Time.time()-s
+        s = Time.time()
 
         cycle = np.array([edge90,edge270])/1000.
 
@@ -185,6 +205,8 @@ def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega
         # mult = 20.*365.*24.*6.*freq
 
         d = nCycles/Nfail
+
+        print 'the rest: ', Time.time()-s
 
         return d
 
@@ -356,10 +378,7 @@ def calc_damage_moments(m_edge,freq,fos=2):
     return d
 
 
-
-
-
-def farm_damage(turbineX,turbineY,windDirections,windFrequencies,atm_free,atm_close,atm_far,Omega_free,Omega_waked,free_speed,waked_speed,TI=0.11,N=24001):
+def farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,TI=0.11):
     """
     calculate the damage of each turbine in the farm for every wind direction
 
@@ -386,11 +405,10 @@ def farm_damage(turbineX,turbineY,windDirections,windFrequencies,atm_free,atm_cl
     nDirections = len(windDirections)
     nTurbines = len(turbineX)
 
-    for i in range(nTurbines):
-        for j in range(nDirections):
-            turbineXw, turbineYw = fast_calc_aep.windframe(windDirections[j], turbineX, turbineY)
-            moments = get_loads_history(turbineX,turbineY,i,Omega_free,Omega_waked,free_speed,waked_speed,atm_free,atm_close,atm_far,TI=TI,N=N)
-            damage[i] += calc_damage(moments,windFrequencies[j])
+    for j in range(nDirections):
+        turbineXw, turbineYw = fast_calc_aep.windframe(windDirections[j], turbineX, turbineY)
+        for i in range(nTurbines):
+            damage[i] += get_edgewise_damage(turbineXw,turbineYw,i,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,wind_speed=free_speed,TI=0.11)*windFrequencies[j]
     return damage
 
 

@@ -7,6 +7,8 @@ from scipy import interpolate
 # import _porteagel_fortran
 import gaus
 from wakeexchange.utilities import sunflower_points
+import sys
+sys.dont_write_bytecode = True
 
 
 def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=90.,shearExp=0.):
