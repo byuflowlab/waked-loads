@@ -33,7 +33,7 @@ def WindDirectionPower(wtVelocity,rated_ws=False,rated_power=False,cut_in_speed=
             y1 = rated_power*((cut_in_speed+buffer)/rated_ws)**3
             dy0 = 0.
             dy1 = 3.*rated_power*(cut_in_speed+buffer)**2/(rated_ws**3)
-            wtPower[turb] = _floris.hermite_spline(wtVelocity[turb], x0, x1, y0, dy0, y1, dy1)
+            wtPower[turb] = fast_calc_aep.hermite_spline(wtVelocity[turb], x0, x1, y0, dy0, y1, dy1)
         # If we're between cut-in and rated
         if ((wtVelocity[turb] > (cut_in_speed+buffer)) and (wtVelocity[turb] < (rated_ws-buffer))):
             wtPower[turb] = rated_power*(wtVelocity[turb]/rated_ws)**3
@@ -45,7 +45,7 @@ def WindDirectionPower(wtVelocity,rated_ws=False,rated_power=False,cut_in_speed=
             y1 = rated_power
             dy0 = 3.*rated_power*(rated_ws-buffer)**2/(rated_ws**3)
             dy1 = 0.
-            wtPower[turb] = _floris.hermite_spline(wtVelocity[turb], x0, x1, y0, dy0, y1, dy1)
+            wtPower[turb] = fast_calc_aep.hermite_spline(wtVelocity[turb], x0, x1, y0, dy0, y1, dy1)
         # If we're between rated and cut-out
         if ((wtVelocity[turb] > (rated_ws+buffer)) and (wtVelocity[turb] < (cut_out_speed-buffer))):
             wtPower[turb] = rated_power
@@ -57,7 +57,7 @@ def WindDirectionPower(wtVelocity,rated_ws=False,rated_power=False,cut_in_speed=
             y1 = 0.
             dy0 = 0.
             dy1 = 0.
-            wtPower[turb] = _floris.hermite_spline(wtVelocity[turb], x0, x1, y0, dy0, y1, dy1)
+            wtPower[turb] = fast_calc_aep.hermite_spline(wtVelocity[turb], x0, x1, y0, dy0, y1, dy1)
         # If we're above cut-out
         if wtVelocity[turb] > (cut_out_speed+buffer):
             wtPower[turb] = 0.

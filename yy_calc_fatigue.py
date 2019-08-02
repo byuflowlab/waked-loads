@@ -120,7 +120,7 @@ def setup_airfoil():
         pitch = 0.0
         yaw_deg = 0.
 
-        return Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg
+        return Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg
 
 
 def make_edge_loads(upper,lower,Omega,N=24001,duration=10.):
@@ -132,38 +132,26 @@ def make_edge_loads(upper,lower,Omega,N=24001,duration=10.):
         return m
 
 
-def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,wind_speed=8.0,TI=0.11):
+def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,
+                        Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=0.11):
 
-        s = Time.time()
-        Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
-        print 'setup airfoil: ', Time.time()-s
+        o = np.array([Omega_free,Omega_far,Omega_close,Omega_close])
+        sp = np.array([free_speed,far_speed,close_speed,0.])
+        f_o = interp1d(sp,o,kind='linear')
+        actual_speed = get_eff_turbine_speeds(turbineX, turbineY, free_speed,TI=TI)[turb_index]
+        Omega = f_o(actual_speed)
 
         az = 90.
-        s = Time.time()
         x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],hubHt,r,yaw_deg,az)
-        print 'find XYZ 1: ', Time.time()-s
-        s = Time.time()
-        speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, wind_speed,TI=TI)
-        print 'get speeds 1: ', Time.time()-s
-        s = Time.time()
-        # mean_speed = np.mean(speeds)
-        # speeds = factor*(speeds-mean_speed)+mean_speed
-        _, edge90 = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,wind_speed,pitch,azimuth=az)
-        print 'calc moment 1: ', Time.time()-s
-        s = Time.time()
+        speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, free_speed, TI=TI)
+        # edge90 = calc_moment_edge(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,wind_speed,pitch,azimuth=az)
+        _,edge90 = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=az)
 
         az = 270.
         x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],hubHt,r,yaw_deg,az)
-        print 'find XYZ 2: ', Time.time()-s
-        s = Time.time()
-        speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, wind_speed,TI=TI)
-        print 'get speeds 2: ', Time.time()-s
-        s = Time.time()
-        # mean_speed = np.mean(speeds)
-        # speeds = factor*(speeds-mean_speed)+mean_speed
-        _, edge270 = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,wind_speed,pitch,azimuth=az)
-        print 'calc moment 2: ', Time.time()-s
-        s = Time.time()
+        speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, free_speed, TI=TI)
+        # edge270 = calc_moment_edge(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,wind_speed,pitch,azimuth=az)
+        _,edge270 = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=az)
 
         cycle = np.array([edge90,edge270])/1000.
 
@@ -176,37 +164,18 @@ def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega
         mean = (moment_mean*R/I)
         alternate = (moment_alternate*R/I)
 
-
-
         # Goodman correction
         # su = 345000.
         su = 459000.
         effective = alternate/(1.-mean/su)
-        # print 'mean: ', mean
-        # print 'alternate: ', alternate
-        # print 'effective: ', effective
-
 
         m = 10.
         # Nfail = 10.**((-mar[i]/su+1.)/0.1) #I'm pretty sure this is wrong for these cycles
         Nfail = (su/effective)**m #mLife
-        # print 'Nfail: ', Nfail
-
-        o = np.array([Omega_free,Omega_far,Omega_close,Omega_close])
-        sp = np.array([free_speed,far_speed,close_speed,0.])
-        f_o = interp1d(sp,o,kind='linear')
-        actual_speed = get_eff_turbine_speeds(turbineX, turbineY, wind_speed,TI=TI)[turb_index]
-        Omega = f_o(actual_speed)
 
         nCycles = Omega*60.*24.*365.25*20.
-        # print 'nCycles: ', nCycles
-        # print 'nFail: ', Nfail
-
-        # mult = 20.*365.*24.*6.*freq
 
         d = nCycles/Nfail
-
-        print 'the rest: ', Time.time()-s
 
         return d
 
@@ -378,7 +347,8 @@ def calc_damage_moments(m_edge,freq,fos=2):
     return d
 
 
-def farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,TI=0.11):
+def farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,
+                        Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=0.11):
     """
     calculate the damage of each turbine in the farm for every wind direction
 
@@ -406,9 +376,10 @@ def farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free
     nTurbines = len(turbineX)
 
     for j in range(nDirections):
-        turbineXw, turbineYw = fast_calc_aep.windframe(windDirections[j], turbineX, turbineY)
-        for i in range(nTurbines):
-            damage[i] += get_edgewise_damage(turbineXw,turbineYw,i,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,wind_speed=free_speed,TI=0.11)*windFrequencies[j]
+            turbineXw, turbineYw = fast_calc_aep.windframe(windDirections[j], turbineX, turbineY)
+            for i in range(nTurbines):
+                damage[i] += get_edgewise_damage(turbineXw,turbineYw,i,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,
+                                        Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)*windFrequencies[j]
     return damage
 
 
@@ -427,7 +398,7 @@ if __name__ == '__main__':
         angles = angles[0:1000]
         mx_FAST = mx_FAST[0:1000]
 
-        Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
+        Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
 
         hub_height = 90.
 
@@ -451,37 +422,37 @@ if __name__ == '__main__':
                 #freestream
                 x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
                 speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-                flap1[i], edge1[i] = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)
+                flap1[i], edge1[i] = calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)
 
                 # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY2[1],hub_height,r,yaw_deg,az)
                 # speeds, _ = get_speeds(turbineX, turbineY2, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-                # flap2[i], edge2[i] = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)
+                # flap2[i], edge2[i] = calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)
 
         # plt.plot(angles,flap1/1000.,'--r')
 
         az = 0.
         x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
         speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
+        print calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
+        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
 
         az = 90.
         x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
         speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
+        print calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
+        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
 
         az = 180.
         x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
         speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
+        print calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
+        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
 
         az = 270.
         x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
         speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
+        print calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
+        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
 
 
         plt.plot(angles,edge1/1000.,'-r')

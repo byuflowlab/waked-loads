@@ -14,8 +14,8 @@ if __name__ == '__main__':
       offset = np.array([-1.,-0.75,-0.5,-0.25,0.,0.25,0.5,0.75,1.])
       # sep = np.array([4.])
       # offset = np.array([0.5])
-      TI = 11.
-      freestream = True
+      TI = 5.6
+      freestream = False
       for i in range(len(sep)):
             damage = np.zeros_like(offset)
             di = np.zeros_like(offset)

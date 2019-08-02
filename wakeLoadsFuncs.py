@@ -8,7 +8,80 @@ from scipy import interpolate
 import gaus
 from wakeexchange.utilities import sunflower_points
 import sys
+import time
 sys.dont_write_bytecode = True
+
+def calc_moment_edge(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=90.,shearExp=0.):
+
+    N = len(r)
+    M = 0.
+
+    yaw = 0.
+    tilt = 0.
+
+    # s = time.time()
+    aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                           precone, tilt, yaw, shearExp, hubHt, nSector)
+    _, loads_edge = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+    # print 'run CCBlade: ', time.time()-s
+
+    # s = time.time()
+
+    # #approximate load at r = Rhub
+    # dL = loads_flap[1]-loads_flap[0]
+    # dr = r[1]-r[0]
+    # m = dL/dr
+    # Lhub = np.array([loads_flap[0] + m*(Rhub-r[0])])
+    #
+    # #approximate load at r = Rtip
+    # dL = loads_flap[-1]-loads_flap[-2]
+    # dr = r[-1]-r[-2]
+    # m = dL/dr
+    # Ltip = np.array([loads_flap[-1] + m*(Rtip-r[-1])])
+    #
+    # Rhub = np.array([Rhub])
+    # Rtip = np.array([Rtip])
+    #
+    r = np.append(Rhub,r)
+    r = np.append(r,Rtip)
+    # loads_flap = np.append(Lhub,loads_flap)
+    # loads_flap = np.append(loads_flap,Ltip)
+    #
+    # L = interpolate.interp1d(r,loads_flap)
+    # rad = np.linspace(Rhub,Rtip,500)
+    # x = L(rad)*(rad-loc)
+    # M_flap = np.trapz(x,x=rad)
+
+
+
+    #approximate load at r = Rhub
+    dL = loads_edge[1]-loads_edge[0]
+    dr = r[1]-r[0]
+    m = dL/dr
+    Lhub = np.array([loads_edge[0] + m*(Rhub-r[0])])
+
+    #approximate load at r = Rtip
+    dL = loads_edge[-1]-loads_edge[-2]
+    dr = r[-1]-r[-2]
+    m = dL/dr
+    Ltip = np.array([loads_edge[-1] + m*(Rtip-r[-1])])
+
+    loads_edge = np.append(Lhub,loads_edge)
+    loads_edge = np.append(loads_edge,Ltip)
+
+    L = interpolate.interp1d(r,loads_edge)
+    rad = np.linspace(Rhub,Rtip,500)
+    x = L(rad)*(rad-loc)
+    M_edge = np.trapz(x,x=rad)
+
+    """add gravity loads"""
+    blade_mass = 17536.617
+    blade_cm = 20.650
+    grav = 9.81
+    M_edge += np.sin(np.deg2rad(azimuth))*blade_mass*grav*blade_cm
+
+    # print 'the rest: ', time.time()-s
+    return M_edge
 
 
 def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=90.,shearExp=0.):
@@ -19,9 +92,13 @@ def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSect
     yaw = 0.
     tilt = 0.
 
+    s = time.time()
     aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
                            precone, tilt, yaw, shearExp, hubHt, nSector)
     loads_flap, loads_edge = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+    # print 'run CCBlade: ', time.time()-s
+
+    s = time.time()
 
     #approximate load at r = Rhub
     dL = loads_flap[1]-loads_flap[0]
@@ -76,6 +153,7 @@ def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSect
     grav = 9.81
     M_edge += np.sin(np.deg2rad(azimuth))*blade_mass*grav*blade_cm
 
+    # print 'the rest: ', time.time()-s
     return M_flap,M_edge
 
 
