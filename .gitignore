@@ -1,6 +1,7 @@
 *.pdf
 *.out
 *.pyc
+*.so
 .DS_STORE
 BYU*
 NAWEA*
