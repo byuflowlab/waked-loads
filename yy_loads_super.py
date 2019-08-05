@@ -17,6 +17,7 @@ if __name__ == '__main__':
       # filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C437_W8_T5.6_P0.0_4D_L0/Model.out'
       # filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C455_W8_T5.6_P0.0_10D_L0/Model.out'
 
+
       TI = 0.11
 
       start_setup = Time.time()
@@ -45,6 +46,7 @@ if __name__ == '__main__':
                   damage[j] = get_edgewise_damage(turbineX,turbineY,turb_index,ofree,sfree,oclose,sclose,ofar,sfar,
                                     Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
 
+<<<<<<< HEAD
                   # print 'one: ', damage[j]
                   # windDirections = np.array([270.,270.,270.])
                   # windFrequencies = np.array([0.45,0.25,0.3])
@@ -52,6 +54,15 @@ if __name__ == '__main__':
                   # windFrequencies = np.array([1.])
                   # print 'two: ', farm_damage(turbineX,turbineY,windDirections,windFrequencies,ofree,sfree,oclose,sclose,ofar,sfar,
                   #                         Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
+=======
+                #   print 'one: ', damage[j]
+                #   windDirections = np.array([270.,270.,270.])
+                #   windFrequencies = np.array([0.45,0.25,0.3])
+                  # windDirections = np.array([270.])
+                  # windFrequencies = np.array([1.])
+                #   print 'two: ', farm_damage(turbineX,turbineY,windDirections,windFrequencies,ofree,sfree,oclose,sclose,ofar,sfar,
+                #                           Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
+>>>>>>> 59d6bf2566276557ef3962171a625ed1d704ba86
 
             print 'separation: ', sep[i]
             print 'damage: ', repr(damage)

@@ -142,8 +142,17 @@ def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega
         Omega = f_o(actual_speed)
         # print 'Omega: ', Omega
 
+
         az = 90.
         x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],hubHt,r,yaw_deg,az)
+        # print 'Omega: ', Omega
+        # print 'turbineX: ', turbineX
+        # print 'turbineY: ', turbineY
+        # print 'x_locs: ', x_locs
+        # print 'y_locs: ', y_locs
+        # print 'z_locs: ', z_locs
+        # print 'free_speed: ', free_speed
+        # print 'TI: ', TI
         speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, free_speed, TI=TI)
         # edge90 = calc_moment_edge(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,wind_speed,pitch,azimuth=az)
         _,edge90 = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=az)

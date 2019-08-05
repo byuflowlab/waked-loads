@@ -156,12 +156,9 @@ def obj_func_damage(xdict):
 
     funcs = {}
 
-    s = time.time()
     AEP = calcAEP(turbineX,turbineY,windDirections,windSpeeds,windFrequencies,TI=TI)
     funcs['AEP'] = -AEP/1.E7
-    print 'aep time: ', time.time() - s
 
-    s = time.time()
     separation_squared,boundary_distances = constraints.constraints_position(turbineX,turbineY,boundaryVertices,boundaryNormals)
 
 
@@ -174,14 +171,10 @@ def obj_func_damage(xdict):
         b[i] = min(bounds[i])
     funcs['bound'] = b
 
-    print 'constraints time: ', time.time()-s
-
-    s = time.time()
     damage = farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free_speed,
                                     Omega_close,close_speed,Omega_far,far_speed,Rhub,r,chord,theta,af,Rtip,
                                     B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
     funcs['damage'] = damage
-    print 'damage time: ', time.time()-s
     fail = False
 
     return funcs, fail
@@ -220,9 +213,9 @@ if __name__ == "__main__":
 
     print 'running setup'
 
-    filename_free = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
-    filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
-    filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
+    filename_free = '/home/flowlab/PJ/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
+    filename_close = '/home/flowlab/PJ/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
+    filename_far = '/home/flowlab/PJ/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
 
     TI = 0.11
     Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed = find_omega(filename_free,filename_close,filename_far,TI=TI)
@@ -230,8 +223,8 @@ if __name__ == "__main__":
 
     nTurbs = 10
 
-    folder = 'yy_results/10turbs_2dirs_damage'
-    # folder = 'NAWEA/10_2dirs_minDamage'
+    damage_lim = 1.21
+    folder = 'yy_results/10turbs_2dirs_cons1.21'
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -327,15 +320,16 @@ if __name__ == "__main__":
     print 'running optimization'
 
     scale = 10.
+
     for k in range(num):
         turbineX,turbineY = random_start(nTurbs,rotor_diameter,xmin,xmax,ymin,ymax)
         turbineX = turbineX/scale
         turbineY = turbineY/scale
 
         """Optimization"""
-        optProb = Optimization('Wind_Farm_AEP', obj_func)
-        # optProb.addObj('AEP')
-        optProb.addObj('damage')
+        optProb = Optimization('Wind_Farm_AEP', obj_func_damage)
+        optProb.addObj('AEP')
+        # optProb.addObj('damage')
 
         optProb.addVarGroup('turbineX', nTurbs, type='c', lower=min(xBounds), upper=max(xBounds), value=turbineX)
         optProb.addVarGroup('turbineY', nTurbs, type='c', lower=min(yBounds), upper=max(yBounds), value=turbineY)
@@ -343,7 +337,7 @@ if __name__ == "__main__":
         num_cons_sep = (nTurbs-1)*nTurbs/2
         optProb.addConGroup('sep', num_cons_sep, lower=0., upper=None)
         optProb.addConGroup('bound', nTurbs, lower=0., upper=None)
-        # optProb.addConGroup('damage', nTurbs, lower=None, upper=0.74)
+        optProb.addConGroup('damage', nTurbs, lower=None, upper=damage_lim)
 
         opt = SNOPT()
         opt.setOption('Scale option',0)
@@ -367,8 +361,8 @@ if __name__ == "__main__":
         damage = funcs['damage']
 
         tol = 1.E-4
-        # if separation > -tol and boundary > -tol and max(damage) < 0.74+tol:
-        if separation > -tol and boundary > -tol:
+        if separation > -tol and boundary > -tol and max(damage) < damage_lim+tol:
+        # if separation > -tol and boundary > -tol:
 
             file = open('%s/AEP.txt'%folder, 'a')
             file.write('%s'%(AEP) + '\n')
