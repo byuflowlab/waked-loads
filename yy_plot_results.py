@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 if __name__ == '__main__':
 
             folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_aep'
+            # folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_damage'
 
             fileAEP = folder+'/AEP.txt'
             fileDAMAGE = folder+'/damage.txt'
@@ -13,13 +14,17 @@ if __name__ == '__main__':
             AEP = np.loadtxt(fileAEP)
             damage = np.loadtxt(fileDAMAGE)
 
-            print damage[0][0]
-
             AEP = AEP[0:100]
-            AEP = AEP/np.max(AEP)
+            print max(AEP)
+            maxAEP = 46.319760162591045
+            AEP = AEP/maxAEP
             maxD = np.zeros_like(AEP)
             for i in range(len(AEP)):
                         maxD[i] = np.max(damage[i])
+
+
+
+            # print min(maxD)
 
             fig = plt.figure(1,figsize=[6.,2.5])
             ax1 = plt.subplot(121)
@@ -46,9 +51,12 @@ if __name__ == '__main__':
             ax1.set_xticks((1.,1.2,1.4,1.6,1.8,2.0))
             ax1.set_xticklabels(('1','1.2','1.4','1.6','1.8','2'))
 
-            bins = np.linspace(0.97,1.0001,20)
+            bins = np.linspace(0.6,1.0001,20)
             ax2.hist(AEP,bins=bins,color='C0')
-
+            ax2.set_yticks((5,10,15,20))
+            ax2.set_yticklabels(('5','10','15','20'))
+            ax2.set_xticks((0.6,0.7,0.8,0.9,1.0))
+            ax2.set_xticklabels(('0.6','0.7','0.8','0.9','1'))
 
 
 
