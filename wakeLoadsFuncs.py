@@ -96,7 +96,7 @@ def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSect
     aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
                            precone, tilt, yaw, shearExp, hubHt, nSector)
     loads_flap, loads_edge = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
-    print 'loads_edge: ', loads_edge
+    # print 'loads_edge: ', loads_edge
     # print 'run CCBlade: ', time.time()-s
 
     s = time.time()
@@ -404,6 +404,18 @@ if __name__ == '__main__':
 
     print M1_flap-M2_flap
     print M1_edge-M2_edge
+
+
+    turbineX = np.array([0.,504.])
+    turbineY = np.array([0.,126.4])
+    wind_speed = 8.
+
+    az = np.linspace(0.,360.*3.,100)
+    mom = np.zeros(100)
+    for i in range(100):
+        mom[i] =  calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=90.,shearExp=0.)
+    plt.plot(az,mom)
+    plt.show()
 
 
     # import matplotlib.pyplot as plt

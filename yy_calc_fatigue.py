@@ -176,7 +176,7 @@ def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega
 
         # Goodman correction
         # su = 345000.
-        su = 459000.
+        su = 4590000.
         effective = alternate/(1.-mean/su)
 
         m = 10.
@@ -395,18 +395,81 @@ def farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free
 
 if __name__ == '__main__':
 
-        # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C664_W8_T11.0_P0.0_7D_L0.5/Model.out'
+        filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C664_W8_T11.0_P0.0_7D_L0.5/Model.out'
         # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
         # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
         # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
-        filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C656_W8_T11.0_P0.0_4D_L0.75/Model.out'
+        # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C655_W8_T11.0_P0.0_4D_L0.5/Model.out'
 
         lines = np.loadtxt(filename,skiprows=8)
         angles = lines[:,5]
         mx_FAST = lines[:,11]
 
-        angles = angles[0:1000]
-        mx_FAST = mx_FAST[0:1000]
+        # angles = angles[0:1000]
+        # mx_FAST = mx_FAST[0:1000]
+
+        ang = np.array([])
+        mom = np.array([])
+        for i in range(1000):
+                ang = np.append(ang,angles[i+37])
+                mom = np.append(mom,mx_FAST[i+37])
+                if angles[i+38] < angles[i+37]:
+                        plt.plot(ang,mom,color='C0')
+                        ang = np.array([])
+                        mom = np.array([])
+
+        Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
+
+        hub_height = 90.
+
+        # angles = np.linspace(0.,720.,100)
+        edge1 = np.zeros_like(angles)
+        flap1 = np.zeros_like(angles)
+
+        edge2 = np.zeros_like(angles)
+        flap2 = np.zeros_like(angles)
+
+        turbineX = np.array([0.,126.4])*7.
+
+        turbineY1 = np.array([0.,126.4])*0.5
+
+        angles = np.linspace(0.,360.,100)
+        edge1 = np.zeros_like(angles)
+        flap1 = np.zeros_like(angles)
+        for i in range(len(angles)):
+
+                az = angles[i]
+                #freestream
+                x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
+                speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
+                flap1[i], edge1[i] = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)
+
+        plt.plot(angles,edge1/1000.,color='C1',linewidth=2)
+
+
+
+        # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C664_W8_T11.0_P0.0_7D_L0.5/Model.out'
+        # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
+        # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
+        # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
+        filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C655_W8_T11.0_P0.0_4D_L0.5/Model.out'
+
+        lines = np.loadtxt(filename,skiprows=8)
+        angles = lines[:,5]
+        mx_FAST = lines[:,11]
+
+        # angles = angles[0:1000]
+        # mx_FAST = mx_FAST[0:1000]
+
+        ang = np.array([])
+        mom = np.array([])
+        for i in range(1000):
+                ang = np.append(ang,angles[i+37])
+                mom = np.append(mom,mx_FAST[i+37])
+                if angles[i+38] < angles[i+37]:
+                        plt.plot(ang,mom,color='C0')
+                        ang = np.array([])
+                        mom = np.array([])
 
         Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
 
@@ -421,18 +484,25 @@ if __name__ == '__main__':
 
         turbineX = np.array([0.,126.4])*4.
 
-        turbineY1 = np.array([0.,126.4])*0.75
-        turbineY2 = np.array([0.,126.4])*100.
+        turbineY1 = np.array([0.,126.4])*0.5
 
-
-
+        angles = np.linspace(0.,360.,100)
+        edge1 = np.zeros_like(angles)
+        flap1 = np.zeros_like(angles)
         for i in range(len(angles)):
-                print i
+
                 az = angles[i]
                 #freestream
                 x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
                 speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-                flap1[i], edge1[i] = calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)
+                flap1[i], edge1[i] = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)
+
+        plt.plot(angles,edge1/1000.,color='C1',linewidth=2)
+
+
+
+
+        plt.show()
 
                 # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY2[1],hub_height,r,yaw_deg,az)
                 # speeds, _ = get_speeds(turbineX, turbineY2, x_locs, y_locs, z_locs, 8.0,TI=0.11)
@@ -440,39 +510,39 @@ if __name__ == '__main__':
 
         # plt.plot(angles,flap1/1000.,'--r')
 
-        az = 0.
-        x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
-        speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        print calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
+        # az = 0.
+        # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
+        # speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
+        # print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
+        # plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
+        #
+        # az = 90.
+        # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
+        # speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
+        # print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
+        # plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
+        #
+        # az = 180.
+        # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
+        # speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
+        # print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
+        # plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
+        #
+        # az = 270.
+        # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
+        # speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
+        # print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
+        # plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
 
-        az = 90.
-        x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
-        speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        print calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
 
-        az = 180.
-        x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
-        speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        print calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
+        # plt.plot(angles,edge1/1000.,color='C1')
 
-        az = 270.
-        x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
-        speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        print calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
-
-
-        plt.plot(angles,edge1/1000.,'-r')
-
-        plt.plot(angles,mx_FAST)
+        # plt.plot(angles,mx_FAST)
 
         # plt.plot(angles,flap2/1000.,'--b')
         # plt.plot(angles,edge2/1000.,'-b')
 
-        plt.show()
+        # plt.show()
 
 
         # T11

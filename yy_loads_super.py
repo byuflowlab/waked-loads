@@ -46,24 +46,6 @@ if __name__ == '__main__':
                   damage[j] = get_edgewise_damage(turbineX,turbineY,turb_index,ofree,sfree,oclose,sclose,ofar,sfar,
                                     Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
 
-<<<<<<< HEAD
-                  # print 'one: ', damage[j]
-                  # windDirections = np.array([270.,270.,270.])
-                  # windFrequencies = np.array([0.45,0.25,0.3])
-                  # windDirections = np.array([270.])
-                  # windFrequencies = np.array([1.])
-                  # print 'two: ', farm_damage(turbineX,turbineY,windDirections,windFrequencies,ofree,sfree,oclose,sclose,ofar,sfar,
-                  #                         Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
-=======
-                #   print 'one: ', damage[j]
-                #   windDirections = np.array([270.,270.,270.])
-                #   windFrequencies = np.array([0.45,0.25,0.3])
-                  # windDirections = np.array([270.])
-                  # windFrequencies = np.array([1.])
-                #   print 'two: ', farm_damage(turbineX,turbineY,windDirections,windFrequencies,ofree,sfree,oclose,sclose,ofar,sfar,
-                #                           Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
->>>>>>> 59d6bf2566276557ef3962171a625ed1d704ba86
-
             print 'separation: ', sep[i]
             print 'damage: ', repr(damage)
 

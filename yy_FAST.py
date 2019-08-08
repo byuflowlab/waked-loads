@@ -14,7 +14,7 @@ if __name__ == '__main__':
       offset = np.array([-1.,-0.75,-0.5,-0.25,0.,0.25,0.5,0.75,1.])
       # sep = np.array([4.])
       # offset = np.array([0.5])
-      TI = 5.6
+      TI = 11.
       freestream = False
       for i in range(len(sep)):
             damage = np.zeros_like(offset)
@@ -170,7 +170,7 @@ if __name__ == '__main__':
                   # plt.plot(offset[j],1.2885465608898776,'or')
 
             # plt.figure(1)
-            # plt.plot(offset,damage,'o')
+            plt.plot(offset,damage,'o')
             # plt.figure(2)
             # plt.plot(offset,di,'o')
             print 'separation: ', sep[i]

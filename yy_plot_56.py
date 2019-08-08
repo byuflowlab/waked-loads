@@ -125,14 +125,14 @@ if __name__ == '__main__':
             plt.subplots_adjust(top = 0.8, bottom = 0.2, right = 0.98, left = 0.1,
             hspace = 0, wspace = 0.2)
 
-            ax1.set_ylim(0.5,2.5)
-            ax2.set_ylim(0.5,2.5)
-            ax3.set_ylim(0.5,2.5)
+            ax1.set_ylim(0.3,3.)
+            ax2.set_ylim(0.3,3.)
+            ax3.set_ylim(0.3,3.)
 
             ax1.plot(extra_offset,extra_super4,'o',color='C0',markersize=4)
             ax2.plot(extra_offset,extra_super7,'o',color='C0',markersize=4)
             ax3.plot(extra_offset,extra_super10,'o',color='C0',markersize=4)
 
             plt.suptitle('5.6% TI',family='serif',fontsize=10)
-            # plt.savefig('make_plots/figures/fatigue_damage11.pdf',transparent=True)
+            plt.savefig('make_plots/figures/fatigue_damage56.pdf',transparent=True)
             plt.show()
