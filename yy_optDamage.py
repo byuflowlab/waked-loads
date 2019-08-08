@@ -33,81 +33,7 @@ def random_start(N,D,xmin,xmax,ymin,ymax):
     return x,y
 
 
-def obj_func(xdict):
-    global windDirections
-    global windSpeeds
-    global windFrequencies
-    global boundaryVertices
-    global boundaryNormals
-    global Omega_free
-    global free_speed
-    global Omega_close
-    global close_speed
-    global Omega_far
-    global far_speed
-    global Rhub
-    global r
-    global chord
-    global theta
-    global af
-    global Rtip
-    global B
-    global rho
-    global mu
-    global precone
-    global hubHt
-    global nSector
-    global pitch
-    global yaw_deg
-    global TI
-    global scale
-
-
-    turbineX = xdict['turbineX']*scale
-    turbineY = xdict['turbineY']*scale
-
-    """turbine definition"""
-    turbineZ = np.ones_like(turbineX)*90.
-    rotorDiameter = np.ones_like(turbineX)*126.4
-    shearExp = 0.
-    wakemodel = 2
-    relaxationFactor = 1.
-    rated_ws = 11.4
-    rated_power = 5000.
-    cut_in_speed = 3.
-    cut_out_speed = 25.
-    zref = 90.
-    z0 = 0.
-
-
-    funcs = {}
-
-    AEP = calcAEP(turbineX,turbineY,windDirections,windSpeeds,windFrequencies,TI=TI)
-    funcs['AEP'] = -AEP/1.E8
-
-
-    separation_squared,boundary_distances = constraints.constraints_position(turbineX,turbineY,boundaryVertices,boundaryNormals)
-
-    funcs['sep'] = (separation_squared-(126.4*2.)**2)/1.E5
-    bounds = boundary_distances
-    # funcs['sep'] = SpacingConstraint(turbineX, turbineY, rotorDiameter, minSpacing=2.0)/1.E5
-    # bounds = arbitraryBoundary(turbineX, turbineY, boundaryVertices, boundaryNormals)/1.E3
-    b = np.zeros(np.shape(bounds)[0])
-    for i in range(len(b)):
-        b[i] = min(bounds[i])
-    funcs['bound'] = b
-
-    damage = farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free_speed,
-                                    Omega_close,close_speed,Omega_far,far_speed,Rhub,r,chord,theta,af,Rtip,
-                                    B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
-
-    funcs['damage'] = np.max(damage)
-    fail = False
-
-    return funcs, fail
-
-
-def obj_func_damage(xdict):
+def obj_func_full_damage(xdict):
     global windDirections
     global windSpeeds
     global windFrequencies
@@ -175,6 +101,80 @@ def obj_func_damage(xdict):
                                     Omega_close,close_speed,Omega_far,far_speed,Rhub,r,chord,theta,af,Rtip,
                                     B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
     funcs['damage'] = damage
+
+    fail = False
+
+    return funcs, fail
+
+
+def obj_func_max_damage(xdict):
+    global windDirections
+    global windSpeeds
+    global windFrequencies
+    global boundaryVertices
+    global boundaryNormals
+    global Omega_free
+    global free_speed
+    global Omega_close
+    global close_speed
+    global Omega_far
+    global far_speed
+    global Rhub
+    global r
+    global chord
+    global theta
+    global af
+    global Rtip
+    global B
+    global rho
+    global mu
+    global precone
+    global hubHt
+    global nSector
+    global pitch
+    global yaw_deg
+    global TI
+    global scale
+
+
+    turbineX = xdict['turbineX']*scale
+    turbineY = xdict['turbineY']*scale
+
+    """turbine definition"""
+    turbineZ = np.ones_like(turbineX)*90.
+    rotorDiameter = np.ones_like(turbineX)*126.4
+    shearExp = 0.
+    wakemodel = 2
+    relaxationFactor = 1.
+    rated_ws = 11.4
+    rated_power = 5000.
+    cut_in_speed = 3.
+    cut_out_speed = 25.
+    zref = 90.
+    z0 = 0.
+
+
+    funcs = {}
+
+    AEP = calcAEP(turbineX,turbineY,windDirections,windSpeeds,windFrequencies,TI=TI)
+    funcs['AEP'] = -AEP/1.E7
+
+    separation_squared,boundary_distances = constraints.constraints_position(turbineX,turbineY,boundaryVertices,boundaryNormals)
+
+
+    funcs['sep'] = (separation_squared-(126.4*2.)**2)/1.E5
+    bounds = boundary_distances
+    # funcs['sep'] = SpacingConstraint(turbineX, turbineY, rotorDiameter, minSpacing=2.0)/1.E5
+    # bounds = arbitraryBoundary(turbineX, turbineY, boundaryVertices, boundaryNormals)/1.E3
+    b = np.zeros(np.shape(bounds)[0])
+    for i in range(len(b)):
+        b[i] = min(bounds[i])
+    funcs['bound'] = b
+
+    damage = farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free_speed,
+                                    Omega_close,close_speed,Omega_far,far_speed,Rhub,r,chord,theta,af,Rtip,
+                                    B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
+    funcs['damage'] = np.max(damage)
     fail = False
 
     return funcs, fail
@@ -223,21 +223,24 @@ if __name__ == "__main__":
 
     nTurbs = 10
 
-    damage_lim = 1.05
-    folder = 'yy_results/10turbs_30dirs_cons%s'%damage_lim
+    highAEP = 46.319760162591045
+    aep_lim_mult = 0.98
+    aep_lim = highAEP*aep_lim_mult
+
+    folder = 'yy_results/10turbs_2dirs_cons_aep%s'%aep_lim_mult
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    windDirections, windFrequencies, windSpeeds = northIslandRose(30)
-    windSpeeds = np.ones_like(windDirections)*8.0
+    # windDirections, windFrequencies, windSpeeds = northIslandRose(30)
+    # windSpeeds = np.ones_like(windDirections)*8.0
 
     # windDirections = np.array([270.])
     # windSpeeds = np.array([8.])
     # windFrequencies = np.array([1.])
 
-    # windDirections = np.array([0.,270.])
-    # windSpeeds = np.array([8.,8.])
-    # windFrequencies = np.array([0.5,0.5])
+    windDirections = np.array([0.,270.])
+    windSpeeds = np.array([8.,8.])
+    windFrequencies = np.array([0.5,0.5])
 
     rotor_diameter = 126.4
     spacing = 3.
@@ -323,14 +326,15 @@ if __name__ == "__main__":
     scale = 10.
 
     for k in range(num):
+
         turbineX,turbineY = random_start(nTurbs,rotor_diameter,xmin,xmax,ymin,ymax)
         turbineX = turbineX/scale
         turbineY = turbineY/scale
 
         """Optimization"""
-        optProb = Optimization('Wind_Farm_AEP', obj_func_damage)
-        optProb.addObj('AEP')
-        # optProb.addObj('damage')
+        optProb = Optimization('Wind_Farm_AEP', obj_func_max_damage)
+        # optProb.addObj('AEP')
+        optProb.addObj('damage')
 
         optProb.addVarGroup('turbineX', nTurbs, type='c', lower=min(xBounds), upper=max(xBounds), value=turbineX)
         optProb.addVarGroup('turbineY', nTurbs, type='c', lower=min(yBounds), upper=max(yBounds), value=turbineY)
@@ -338,13 +342,14 @@ if __name__ == "__main__":
         num_cons_sep = (nTurbs-1)*nTurbs/2
         optProb.addConGroup('sep', num_cons_sep, lower=0., upper=None)
         optProb.addConGroup('bound', nTurbs, lower=0., upper=None)
-        optProb.addConGroup('damage', nTurbs, lower=None, upper=damage_lim)
+        # optProb.addConGroup('damage', nTurbs, lower=None, upper=damage_lim)
+        optProb.addCon('AEP', lower=None, upper=-aep_lim)
 
         opt = SNOPT()
         opt.setOption('Scale option',0)
         opt.setOption('Iterations limit',1000000)
 
-        opt.setOption('Summary file','%s/summary1.out'%folder)
+        opt.setOption('Summary file','%s/summary.out'%folder)
         opt.setOption('Major optimality tolerance',1.e-4)
         opt.setOption('Major feasibility tolerance',1.e-6)
 
@@ -354,7 +359,7 @@ if __name__ == "__main__":
         y = res.xStar['turbineY']
 
         input = {'turbineX':x,'turbineY':y}
-        funcs,_ = obj_func_damage(input)
+        funcs,_ = obj_func_full_damage(input)
 
         separation = min(funcs['sep'])
         boundary = min(funcs['bound'])
@@ -362,7 +367,8 @@ if __name__ == "__main__":
         damage = funcs['damage']
 
         tol = 1.E-4
-        if separation > -tol and boundary > -tol and max(damage) < damage_lim+tol:
+        if separation > -tol and boundary > -tol and AEP > aep_lim-tol:
+        # if separation > -tol and boundary > -tol and max(damage) < damage_lim+tol:
         # if separation > -tol and boundary > -tol:
 
             file = open('%s/AEP.txt'%folder, 'a')

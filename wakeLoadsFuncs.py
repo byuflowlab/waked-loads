@@ -96,7 +96,7 @@ def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSect
     aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
                            precone, tilt, yaw, shearExp, hubHt, nSector)
     loads_flap, loads_edge = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
-    print 'loads_edge: ', loads_edge
+    # print 'loads_edge: ', loads_edge
     # print 'run CCBlade: ', time.time()-s
 
     s = time.time()

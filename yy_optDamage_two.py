@@ -33,7 +33,7 @@ def random_start(N,D,xmin,xmax,ymin,ymax):
     return x,y
 
 
-def obj_func(xdict):
+def obj_func_no_damage(xdict):
     global windDirections
     global windSpeeds
     global windFrequencies
@@ -83,10 +83,10 @@ def obj_func(xdict):
     funcs = {}
 
     AEP = calcAEP(turbineX,turbineY,windDirections,windSpeeds,windFrequencies,TI=TI)
-    funcs['AEP'] = -AEP/1.E8
-
+    funcs['AEP'] = -AEP/1.E7
 
     separation_squared,boundary_distances = constraints.constraints_position(turbineX,turbineY,boundaryVertices,boundaryNormals)
+
 
     funcs['sep'] = (separation_squared-(126.4*2.)**2)/1.E5
     bounds = boundary_distances
@@ -97,11 +97,6 @@ def obj_func(xdict):
         b[i] = min(bounds[i])
     funcs['bound'] = b
 
-    damage = farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free_speed,
-                                    Omega_close,close_speed,Omega_far,far_speed,Rhub,r,chord,theta,af,Rtip,
-                                    B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
-
-    funcs['damage'] = np.max(damage)
     fail = False
 
     return funcs, fail
@@ -223,21 +218,24 @@ if __name__ == "__main__":
 
     nTurbs = 10
 
-    damage_lim = 1.05
-    folder = 'yy_results/10turbs_30dirs_cons%s'%damage_lim
+    # highAEP = 46.319760162591045
+    # aep_lim_mult = 1.0
+    # aep_lim = highAEP*aep_lim_mult
+    damage_lim = 1.15
+    folder = 'yy_results/10turbs_2dirs_AEP2step%s'%damage_lim
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    windDirections, windFrequencies, windSpeeds = northIslandRose(30)
-    windSpeeds = np.ones_like(windDirections)*8.0
+    # windDirections, windFrequencies, windSpeeds = northIslandRose(30)
+    # windSpeeds = np.ones_like(windDirections)*8.0
 
     # windDirections = np.array([270.])
     # windSpeeds = np.array([8.])
     # windFrequencies = np.array([1.])
 
-    # windDirections = np.array([0.,270.])
-    # windSpeeds = np.array([8.,8.])
-    # windFrequencies = np.array([0.5,0.5])
+    windDirections = np.array([0.,270.])
+    windSpeeds = np.array([8.,8.])
+    windFrequencies = np.array([0.5,0.5])
 
     rotor_diameter = 126.4
     spacing = 3.
@@ -323,12 +321,15 @@ if __name__ == "__main__":
     scale = 10.
 
     for k in range(num):
+
+        """step1, opt AEP"""
+
         turbineX,turbineY = random_start(nTurbs,rotor_diameter,xmin,xmax,ymin,ymax)
         turbineX = turbineX/scale
         turbineY = turbineY/scale
 
         """Optimization"""
-        optProb = Optimization('Wind_Farm_AEP', obj_func_damage)
+        optProb = Optimization('Wind_Farm_AEP', obj_func_no_damage)
         optProb.addObj('AEP')
         # optProb.addObj('damage')
 
@@ -338,51 +339,113 @@ if __name__ == "__main__":
         num_cons_sep = (nTurbs-1)*nTurbs/2
         optProb.addConGroup('sep', num_cons_sep, lower=0., upper=None)
         optProb.addConGroup('bound', nTurbs, lower=0., upper=None)
+        # optProb.addConGroup('damage', nTurbs, lower=None, upper=damage_lim)
+        # optProb.addCon('damage', lower=aep_lim, upper=None)
+
+        opt = SNOPT()
+        opt.setOption('Scale option',0)
+        opt.setOption('Iterations limit',1000000)
+
+        opt.setOption('Summary file','%s/summary.out'%folder)
+        opt.setOption('Major optimality tolerance',1.e-4)
+        opt.setOption('Major feasibility tolerance',1.e-6)
+
+        res = opt(optProb)
+
+        x1 = res.xStar['turbineX']
+        y1 = res.xStar['turbineY']
+
+        input = {'turbineX':x1,'turbineY':y1}
+        funcs,_ = obj_func_damage(input)
+
+        separation = min(funcs['sep'])
+        boundary = min(funcs['bound'])
+        AEP1 = -funcs['AEP']
+        damage1 = farm_damage(x1*scale,y1*scale,windDirections,windFrequencies,Omega_free,free_speed,
+                                        Omega_close,close_speed,Omega_far,far_speed,Rhub,r,chord,theta,af,Rtip,
+                                        B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
+
+
+
+        """Optimization"""
+        optProb = Optimization('Wind_Farm_AEP', obj_func_damage)
+        optProb.addObj('AEP')
+
+        optProb.addVarGroup('turbineX', nTurbs, type='c', lower=min(xBounds), upper=max(xBounds), value=x1)
+        optProb.addVarGroup('turbineY', nTurbs, type='c', lower=min(yBounds), upper=max(yBounds), value=y1)
+
+        optProb.addConGroup('sep', num_cons_sep, lower=0., upper=None)
+        optProb.addConGroup('bound', nTurbs, lower=0., upper=None)
         optProb.addConGroup('damage', nTurbs, lower=None, upper=damage_lim)
 
         opt = SNOPT()
         opt.setOption('Scale option',0)
         opt.setOption('Iterations limit',1000000)
 
-        opt.setOption('Summary file','%s/summary1.out'%folder)
+        opt.setOption('Summary file','%s/summary2.out'%folder)
         opt.setOption('Major optimality tolerance',1.e-4)
         opt.setOption('Major feasibility tolerance',1.e-6)
 
         res = opt(optProb)
 
-        x = res.xStar['turbineX']
-        y = res.xStar['turbineY']
+        x2 = res.xStar['turbineX']
+        y2 = res.xStar['turbineY']
 
-        input = {'turbineX':x,'turbineY':y}
+        input = {'turbineX':x2,'turbineY':y2}
         funcs,_ = obj_func_damage(input)
 
         separation = min(funcs['sep'])
         boundary = min(funcs['bound'])
-        AEP = -funcs['AEP']
-        damage = funcs['damage']
+        AEP2 = -funcs['AEP']
+        damage2 = farm_damage(x2*scale,y2*scale,windDirections,windFrequencies,Omega_free,free_speed,
+                                        Omega_close,close_speed,Omega_far,far_speed,Rhub,r,chord,theta,af,Rtip,
+                                        B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
 
         tol = 1.E-4
-        if separation > -tol and boundary > -tol and max(damage) < damage_lim+tol:
-        # if separation > -tol and boundary > -tol:
+        if separation > -tol and boundary > -tol and np.max(damage2) < damage_lim+tol:
 
-            file = open('%s/AEP.txt'%folder, 'a')
-            file.write('%s'%(AEP) + '\n')
+            file = open('%s/AEP_step1.txt'%folder, 'a')
+            file.write('%s'%(AEP1) + '\n')
             file.close()
 
-            file = open('%s/damage.txt'%folder, 'a')
+            file = open('%s/damage_step1.txt'%folder, 'a')
             for turb in range(nTurbs):
-                file.write('%s'%damage[turb] + ' ')
+                file.write('%s'%damage1[turb] + ' ')
             file.write('\n')
             file.close()
 
-            file = open('%s/turbineX.txt'%folder, 'a')
+            file = open('%s/turbineX_step1.txt'%folder, 'a')
             for turb in range(nTurbs):
-                file.write('%s'%(x[turb]*scale) + ' ')
+                file.write('%s'%(x1[turb]*scale) + ' ')
             file.write('\n')
             file.close()
 
-            file = open('%s/turbineY.txt'%folder, 'a')
+            file = open('%s/turbineY_step1.txt'%folder, 'a')
             for turb in range(nTurbs):
-                file.write('%s'%(y[turb]*scale) + ' ')
+                file.write('%s'%(y1[turb]*scale) + ' ')
+            file.write('\n')
+            file.close()
+
+
+
+            file = open('%s/AEP_step2.txt'%folder, 'a')
+            file.write('%s'%(AEP2) + '\n')
+            file.close()
+
+            file = open('%s/damage_step2.txt'%folder, 'a')
+            for turb in range(nTurbs):
+                file.write('%s'%damage2[turb] + ' ')
+            file.write('\n')
+            file.close()
+
+            file = open('%s/turbineX_step2.txt'%folder, 'a')
+            for turb in range(nTurbs):
+                file.write('%s'%(x2[turb]*scale) + ' ')
+            file.write('\n')
+            file.close()
+
+            file = open('%s/turbineY_step2.txt'%folder, 'a')
+            for turb in range(nTurbs):
+                file.write('%s'%(y2[turb]*scale) + ' ')
             file.write('\n')
             file.close()
