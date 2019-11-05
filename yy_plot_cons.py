@@ -6,9 +6,7 @@ from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 
 if __name__ == '__main__':
             fig = plt.figure(1,figsize=[6.,3.])
-            ax1 = plt.subplot(131)
-            ax2 = plt.subplot(132)
-            ax3 = plt.subplot(133)
+            ax1 = plt.subplot(111)
             # axins = zoomed_inset_axes(ax1, 2.5, loc=4) # zoom-factor: 2.5, location: upper-left
             #
             # axins.get_xaxis().set_visible(False)
@@ -23,10 +21,11 @@ if __name__ == '__main__':
             ax1.set_xticklabels(ax1.get_xticks(), fontProperties)
             ax1.set_yticklabels(ax1.get_yticks(), fontProperties)
 
-            folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_aep'
+            # folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_aep'
+            folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_AEP2step1.3'
 
-            fileAEP = folder+'/AEP.txt'
-            fileDAMAGE = folder+'/damage.txt'
+            fileAEP = folder+'/AEP_step1.txt'
+            fileDAMAGE = folder+'/damage_step1.txt'
 
             AEP = np.loadtxt(fileAEP)
             damage = np.loadtxt(fileDAMAGE)
@@ -38,14 +37,16 @@ if __name__ == '__main__':
             for i in range(len(AEP)):
                         maxD[i] = np.max(damage[i])
 
-            ax1.plot(maxD,AEP,'o',color='C0',markersize=2,label='no damage constraint')
-            # axins.plot(maxD,AEP,'o',color='C0',markersize=2)
+            ax1.scatter(maxD,AEP,color='C0',s=4,label='no damage constraint',edgecolors=None)
+            # axins.plot(maxD,AEP,'o',color='C0',s=4)
 
 
+            # folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_cons1.4'
+            folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_AEP2step1.5'
 
-            folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_cons1.4'
-            fileAEP = folder+'/AEP.txt'
-            fileDAMAGE = folder+'/damage.txt'
+            fileAEP = folder+'/AEP_step2.txt'
+            fileDAMAGE = folder+'/damage_step2.txt'
+
             AEP = np.loadtxt(fileAEP)
             damage = np.loadtxt(fileDAMAGE)
             AEP = AEP[0:100]
@@ -53,13 +54,15 @@ if __name__ == '__main__':
             maxD = np.zeros_like(AEP)
             for i in range(len(AEP)):
                         maxD[i] = np.max(damage[i])
-            ax1.plot(maxD,AEP,'o',color='C1',markersize=2,label=r'$D_{\mathrm{max}} = 1.4$')
-            # axins.plot(maxD,AEP,'o',color='C1',markersize=2)
+            ax1.scatter(maxD,AEP,color='C2',s=4,label=r'$D_{\mathrm{max}} = 1.5$',edgecolors=None)
 
 
-            folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_cons1.2'
-            fileAEP = folder+'/AEP.txt'
-            fileDAMAGE = folder+'/damage.txt'
+            # folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_cons1.4'
+            folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_AEP2step1.3'
+
+            fileAEP = folder+'/AEP_step2.txt'
+            fileDAMAGE = folder+'/damage_step2.txt'
+
             AEP = np.loadtxt(fileAEP)
             damage = np.loadtxt(fileDAMAGE)
             AEP = AEP[0:100]
@@ -67,8 +70,26 @@ if __name__ == '__main__':
             maxD = np.zeros_like(AEP)
             for i in range(len(AEP)):
                         maxD[i] = np.max(damage[i])
-            ax1.plot(maxD,AEP,'o',color='C3',markersize=2,label=r'$D_{\mathrm{max}} = 1.2$')
-            # axins.plot(maxD,AEP,'o',color='C3',markersize=2)
+            lav = np.array([77.,0.,75.])/256.
+            ax1.scatter(maxD,AEP,color='C3',s=4,label=r'$D_{\mathrm{max}} = 1.3$',edgecolors=None)
+            # axins.plot(maxD,AEP,'o',color='C1',s=4)
+
+
+            # folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_cons1.2'
+            folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_AEP2step1.15'
+
+            fileAEP = folder+'/AEP_step2.txt'
+            fileDAMAGE = folder+'/damage_step2.txt'
+
+            AEP = np.loadtxt(fileAEP)
+            damage = np.loadtxt(fileDAMAGE)
+            AEP = AEP[0:100]
+            AEP = AEP/maxAEP
+            maxD = np.zeros_like(AEP)
+            for i in range(len(AEP)):
+                        maxD[i] = np.max(damage[i])
+            ax1.scatter(maxD,AEP,color='C1',s=4,label=r'$D_{\mathrm{max}} = 1.15$',edgecolors=None)
+            # axins.plot(maxD,AEP,'o',color='C3',s=4)
 
 
             ax1.set_ylabel('normalized AEP',family='serif',fontsize=10)
@@ -89,5 +110,5 @@ if __name__ == '__main__':
             ax1.legend(loc=4,prop={'size': 8, 'family': 'serif'}, markerscale=3)
             plt.subplots_adjust(top = 0.98, bottom = 0.2, right = 0.98, left = 0.1,
             hspace = 0, wspace = 0.)
-            # plt.savefig('make_plots/figures/opt_resultsBIG.pdf',transparent=True)
+            # plt.savefig('make_plots/figures/opt_results4.pdf',transparent=True)
             plt.show()

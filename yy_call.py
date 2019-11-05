@@ -9,9 +9,13 @@ sys.dont_write_bytecode = True
 
 if __name__ == '__main__':
       # T11
-      filename_free = '/home/flowlab/PJ/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
-      filename_close = '/home/flowlab/PJ/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
-      filename_far = '/home/flowlab/PJ/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
+      # filename_free = '/home/flowlab/PJ/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
+      # filename_close = '/home/flowlab/PJ/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
+      # filename_far = '/home/flowlab/PJ/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
+      # T11
+      filename_free = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
+      filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
+      filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
       # T5.6
       # filename_free = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C464_W8_T5.6_P0.0_m2D_L0/Model.out'
       # filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C437_W8_T5.6_P0.0_4D_L0/Model.out'

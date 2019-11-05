@@ -223,20 +223,21 @@ if __name__ == "__main__":
 
     nTurbs = 10
 
-    damage_lim = 1.21
-    folder = 'yy_results/10turbs_2dirs_cons1.21'
+    damage_lim = 1.05
+    folder = 'yy_results/10turbs_30dirs_cons%s'%damage_lim
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    # windDirections, windFrequencies, windSpeeds = northIslandRose(30)
+    windDirections, windFrequencies, windSpeeds = northIslandRose(30)
+    windSpeeds = np.ones_like(windDirections)*8.0
 
     # windDirections = np.array([270.])
     # windSpeeds = np.array([8.])
     # windFrequencies = np.array([1.])
 
-    windDirections = np.array([0.,270.])
-    windSpeeds = np.array([8.,8.])
-    windFrequencies = np.array([0.5,0.5])
+    # windDirections = np.array([0.,270.])
+    # windSpeeds = np.array([8.,8.])
+    # windFrequencies = np.array([0.5,0.5])
 
     rotor_diameter = 126.4
     spacing = 3.
@@ -273,7 +274,7 @@ if __name__ == "__main__":
         boundaryVertices, boundaryNormals = calculate_boundary(locations)
 
     elif boundary == 'amalia':
-        locations = np.loadtxt('/Users/ningrsrch/Dropbox/Projects/waked-loads/layout_amalia.txt')
+        locations = np.loadtxt('/home/flowlab/PJ/waked-loads/layout_amalia.txt')
         xBounds = locations[:, 0]
         yBounds = locations[:, 1]
         xBounds = xBounds - min(xBounds) - (max(xBounds)-min(xBounds))/2.
@@ -344,7 +345,7 @@ if __name__ == "__main__":
         opt.setOption('Scale option',0)
         opt.setOption('Iterations limit',1000000)
 
-        opt.setOption('Summary file','summary.out')
+        opt.setOption('Summary file','%s/summary1.out'%folder)
         opt.setOption('Major optimality tolerance',1.e-4)
         opt.setOption('Major feasibility tolerance',1.e-6)
 

@@ -160,5 +160,5 @@ if __name__ == '__main__':
         ax3.set_ylim(0.25,1.1)
 
         # plt.suptitle('1.5')
-        plt.savefig('figures/fatigue_damage.pdf',transparent=True)
+        # plt.savefig('figures/fatigue_damage.pdf',transparent=True)
         plt.show()

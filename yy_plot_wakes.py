@@ -18,6 +18,7 @@ if __name__ == '__main__':
 
                 folder = '/Users/ningrsrch/Dropbox/Projects/waked-loads/yy_results/10turbs_2dirs_aep'
 
+                fileAEP = folder+'/AEP.txt'
                 fileX = folder+'/turbineX.txt'
                 fileY = folder+'/turbineY.txt'
                 fileDAMAGE = folder+'/damage.txt'
@@ -29,15 +30,19 @@ if __name__ == '__main__':
 
                 x = np.loadtxt(fileX)
                 y = np.loadtxt(fileY)
+                aep = np.loadtxt(fileAEP)
                 maxD = maxD[0:100]
 
                 """min or max"""
                 l = np.argsort(maxD)
                 ind = l[10]
                 # ind = np.argmax(maxD)
+                print aep[ind]
+                # max 45.714167167805684
+                # min 45.862487816411644
 
 
-                print damage[ind]
+                D = damage[ind]
                 mind = np.argmax(damage[ind])
 
                 turbineX = x[ind,:]
@@ -90,6 +95,16 @@ if __name__ == '__main__':
                 ax1 = plt.subplot(121)
                 ax2 = plt.subplot(122)
 
+                from yy_calc_fatigue import *
+                filename_free = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
+                filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
+                filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
+
+                TI = 0.11
+                Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed = find_omega(filename_free,filename_close,filename_far,TI=TI)
+                Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
+                print Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed
+
                 dir = 270.
                 turbineXw, turbineYw = fast_calc_aep.windframe(dir, turbineX, turbineY)
 
@@ -100,7 +115,11 @@ if __name__ == '__main__':
                            wec_factor, wake_model_version, interp_type, use_ct_curve,
                            ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
 
-                print ws_array
+                damage270 = farm_damage(turbineXw,turbineYw,np.array([270.]),np.array([0.5]),Omega_free,free_speed,
+                                                    Omega_close,close_speed,Omega_far,far_speed,Rhub,r,chord,theta,af,Rtip,
+                                                    B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
+
+                print damage270
 
                 x = np.zeros((res,res))
                 y = np.zeros((res,res))
@@ -124,7 +143,12 @@ if __name__ == '__main__':
                            wec_factor, wake_model_version, interp_type, use_ct_curve,
                            ct_curve_wind_speed, ct_curve_ct, sm_smoothing)
 
-                print ws_array
+
+
+                damage0 = farm_damage(turbineXw,turbineYw,np.array([270.]),np.array([0.5]),Omega_free,free_speed,
+                                                    Omega_close,close_speed,Omega_far,far_speed,Rhub,r,chord,theta,af,Rtip,
+                                                    B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
+                print damage0
 
                 x = np.zeros((res,res))
                 y = np.zeros((res,res))
@@ -174,6 +198,9 @@ if __name__ == '__main__':
                                 y = np.array([turbineY[i],turbineY[i]])
                                 ax2.plot(x,y,'-',color=color,linewidth=3)
 
+                                ax1.text(turbineX[i],turbineY[i]+100,'%s'%round(damage270[i],2),color=color,fontsize=8,family='serif',horizontalalignment='center',verticalalignment='center',weight='bold')
+                                ax2.text(turbineX[i],turbineY[i]+30,'%s'%round(damage0[i],2),color=color,fontsize=8,family='serif',horizontalalignment='center',verticalalignment='center',weight='bold')
+
                 bound = plt.Circle((0.,0.),circle_radius, color='black', fill=False, linewidth=1)
                 ax1.add_artist(bound)
                 bound = plt.Circle((0.,0.),circle_radius, color='black', fill=False, linewidth=1)
@@ -190,7 +217,7 @@ if __name__ == '__main__':
 
                 ax2.text(830.,0.,'m/s',rotation=-90.,verticalalignment='center',horizontalalignment='center',fontsize=10,family='serif',style='italic')
 
-                plt.savefig('make_plots/figures/wakes_lowdamage.png',transparent=True)
+                # plt.savefig('make_plots/figures/wakes_highdamage.png',transparent=True)
                 plt.show()
 
                 # # fig = plt.figure(1,figsize=[6.,6.])

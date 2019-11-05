@@ -6,7 +6,7 @@ from scipy import interpolate
 # from _porteagel_fortran import porteagel_visualize
 # import _porteagel_fortran
 import gaus
-from wakeexchange.utilities import sunflower_points
+# from wakeexchange.utilities import sunflower_points
 import sys
 import time
 sys.dont_write_bytecode = True
@@ -20,7 +20,7 @@ def calc_moment_edge(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,
     tilt = 0.
 
     # s = time.time()
-    aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+    rotor = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
                            precone, tilt, yaw, shearExp, hubHt, nSector)
     _, loads_edge = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
     # print 'run CCBlade: ', time.time()-s
@@ -96,8 +96,7 @@ def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSect
     aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
                            precone, tilt, yaw, shearExp, hubHt, nSector)
     loads_flap, loads_edge = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
-    # print 'loads_edge: ', loads_edge
-    # print 'run CCBlade: ', time.time()-s
+
 
     s = time.time()
 
@@ -146,7 +145,12 @@ def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSect
     L = interpolate.interp1d(r,loads_edge)
     rad = np.linspace(Rhub,Rtip,500)
     x = L(rad)*(rad-loc)
-    M_edge = np.trapz(x,x=rad)
+    # M_edge = np.trapz(x,x=rad)
+    X = np.zeros(500)
+    for k in range(500):
+        X[k] = x[k]
+    M_edge = np.trapz(X,dx=rad[1]-rad[0])
+
 
     """add gravity loads"""
     blade_mass = 17536.617
@@ -209,8 +213,11 @@ def get_speeds(turbineX, turbineY, xpoints, ypoints, zpoints, wind_speed, wec_fa
     shear_exp = shearExp
     # RotorPointsY = np.array([0.])
     # RotorPointsZ = np.array([0.])
-    nRotorPoints = 20
-    RotorPointsY, RotorPointsZ = sunflower_points(nRotorPoints)
+    # nRotorPoints = 20
+    # RotorPointsY, RotorPointsZ = sunflower_points(nRotorPoints)
+    RotorPointsY = np.array([0.,0.,0.69,-0.69])
+    RotorPointsZ = np.array([0.69,-0.69,0.,0.])
+
     velX = xpoints
     velY = ypoints
     velZ = zpoints
@@ -251,8 +258,11 @@ def get_eff_turbine_speeds(turbineX, turbineY, wind_speed, wec_factor=1.0,wake_m
     shear_exp = shearExp
     # RotorPointsY = np.array([0.])
     # RotorPointsZ = np.array([0.])
-    nRotorPoints = 20
-    RotorPointsY, RotorPointsZ = sunflower_points(nRotorPoints)
+    # nRotorPoints = 20
+    # RotorPointsY, RotorPointsZ = sunflower_points(nRotorPoints)
+
+    RotorPointsY = np.array([0.,0.,0.69,-0.69])
+    RotorPointsZ = np.array([0.69,-0.69,0.,0.])
 
     sorted_x_idx = np.argsort(turbineX)
 

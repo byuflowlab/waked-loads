@@ -2,7 +2,7 @@ import numpy as np
 import gaus
 import sys
 import fast_calc_aep
-from wakeexchange.utilities import sunflower_points
+# from wakeexchange.utilities import sunflower_points
 sys.dont_write_bytecode = True
 
 
@@ -83,8 +83,10 @@ def calcAEP(turbineX,turbineY,windDirections,windSpeeds,windFrequencies,TI=0.11,
     z_0 = 0.
     # RotorPointsY = np.array([0.])
     # RotorPointsZ = np.array([0.])
-    nRotorPoints = 20
-    RotorPointsY, RotorPointsZ = sunflower_points(nRotorPoints)
+    # nRotorPoints = 20
+    # RotorPointsY, RotorPointsZ = sunflower_points(nRotorPoints)
+    RotorPointsY = np.array([0.,0.,0.69,-0.69])
+    RotorPointsZ = np.array([0.69,-0.69,0.,0.])
 
     sorted_x_idx = np.argsort(turbineX)
 

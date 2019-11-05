@@ -156,5 +156,5 @@ if __name__ == '__main__':
             ax3.plot(extra_offset,extra_super10,'o',color='C0',markersize=4)
 
             plt.suptitle('11% TI',family='serif',fontsize=10)
-            plt.savefig('make_plots/figures/fatigue_damage11.pdf',transparent=True)
+            # plt.savefig('make_plots/figures/fatigue_damage11.pdf',transparent=True)
             plt.show()

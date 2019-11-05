@@ -6,14 +6,16 @@ import time
 # from calc_fatigue_NAWEA import *
 from yy_calc_fatigue import *
 # import damage_calc
+from wakeLoadsFuncs import *
+from scipy.interpolate import interp1d
 
 
 if __name__ == '__main__':
 
       sep = np.array([4.,7.,10.])
       offset = np.array([-1.,-0.75,-0.5,-0.25,0.,0.25,0.5,0.75,1.])
-      # sep = np.array([4.])
-      # offset = np.array([0.5])
+      sep = np.array([4.])
+      offset = np.array([-0.5])
       TI = 11.
       freestream = False
       for i in range(len(sep)):
@@ -151,6 +153,71 @@ if __name__ == '__main__':
                   my = lines[:,12]
                   mx = lines[:,11]
 
+                  time = time-time[0]
+                  num = 5000
+
+                  # plt.figure(1,figsize=[6.,2.5])
+                  #
+                  # plt.plot(time[0:num],my[0:num],label='flapwise')
+                  # plt.plot(time[0:num],mx[0:num],label='edgewise')
+                  #
+                  # plt.xlim(0.,time[num])
+                  # plt.ylabel('root bending moment (kN-m)')
+                  # plt.xlabel('time (s)')
+                  # plt.subplots_adjust(top = 0.95, bottom = 0.2, right = 0.98, left = 0.2,
+                  #     hspace = 0, wspace = 0.2)
+                  # plt.legend(loc=4)
+                  # plt.savefig('moments.pdf',transparent=True)
+                  # plt.show()
+
+                  filename_free = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
+                  filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
+                  filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
+
+                  TI = 0.11
+                  Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed = find_omega(filename_free,filename_close,filename_far,TI=TI)
+                  Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
+
+                  rotor_diameter = 126.4
+                  turbineX = np.array([0.,4.*rotor_diameter])
+                  turbineY = np.array([0.,-0.5*rotor_diameter])
+                  turb_index = 1
+
+                  o = np.array([Omega_free,Omega_far,Omega_close,Omega_close])
+                  sp = np.array([free_speed,far_speed,close_speed,0.])
+                  f_o = interp1d(sp,o,kind='linear')
+                  actual_speed = get_eff_turbine_speeds(turbineX, turbineY, free_speed,TI=TI)[turb_index]
+                  Omega = f_o(actual_speed)
+
+                  az = np.linspace(0.,360.,1000)
+                  ccs = np.zeros_like(az)
+                  free_speed = 8.
+
+                  for k in range(len(az)):
+                          x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],hubHt,r,yaw_deg,az[k])
+                          speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, free_speed, TI=TI)
+                          _,ccs[k] = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=az[k])
+
+                  plt.figure(1,figsize=[6.,2.5])
+
+                  time -= 2.
+                  # plt.plot(time[0:num],mx[0:num],label='FAST')
+                  # plt.plot(az/(52.),ccs/1000.,linestyle='--',label='CCBlade')
+                  plt.plot(az,ccs/1000.)
+
+                  plt.xlim(0.,360.)
+                  plt.ylabel('root bending moment (kN-m)',family='serif',fontsize=10)
+                  # plt.xlabel('time (s)')
+                  plt.xlabel('azimuth angle (deg)',family='serif',fontsize=10)
+                  plt.subplots_adjust(top = 0.95, bottom = 0.2, right = 0.98, left = 0.2,
+                      hspace = 0, wspace = 0.2)
+                  # plt.legend(loc=4)
+                  # plt.savefig('FASTvCC.pdf',transparent=True)
+                  plt.savefig('CCmoments.pdf',transparent=True)
+                  plt.show()
+
+
+
                   # plt.plot(my)
                   # plt.plot(mx)
                   # plt.show()
@@ -162,7 +229,8 @@ if __name__ == '__main__':
                   di[j] = np.max(mx)-np.min(mx)
                   # plt.show()
 
-                  damage[j] = calc_damage_moments(mx,1.0,fos=2.)
+                  # damage[j] = calc_damage_moments(mx,1.0,fos=1.125)
+                  damage[j] = calc_damage_moments(mx,1.0,fos=1.125)
                   # damage[j] = get_damage(my,1.0,fos=2.0)
                   # new_calc_damage(my,mx,1.0)
                   print damage[j]
@@ -171,12 +239,13 @@ if __name__ == '__main__':
 
             # plt.figure(1)
             plt.plot(offset,damage,'o')
+            # plt.show()
             # plt.figure(2)
             # plt.plot(offset,di,'o')
             print 'separation: ', sep[i]
             print 'damage: ', repr(damage)
       # plt.ylim(0.25,1.1)
-      plt.show()
+      # plt.show()
 
 
 
