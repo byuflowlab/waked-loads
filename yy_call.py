@@ -2,28 +2,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time as Time
-from yy_calc_fatigue import *
+from calc_fatigue import *
 import sys
 sys.dont_write_bytecode = True
 
 
 if __name__ == '__main__':
-      # T11
-      # filename_free = '/home/flowlab/PJ/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
-      # filename_close = '/home/flowlab/PJ/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
-      # filename_far = '/home/flowlab/PJ/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
-      # T11
-      filename_free = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
-      filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
-      filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
-      # T5.6
-      # filename_free = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C464_W8_T5.6_P0.0_m2D_L0/Model.out'
-      # filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C437_W8_T5.6_P0.0_4D_L0/Model.out'
-      # filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C455_W8_T5.6_P0.0_10D_L0/Model.out'
 
       TI = 0.11
-
-      ofree,sfree,oclose,sclose,ofar,sfar = find_omega(filename_free,filename_close,filename_far,TI=TI)
       Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
 
       windDirections = np.array([0.,270.])
@@ -34,12 +20,6 @@ if __name__ == '__main__':
 
       print 'windDirections: ', windDirections
       print 'windFrequencies: ', windFrequencies
-      print 'ofree: ', ofree
-      print 'sfree: ', sfree
-      print 'oclose: ', oclose
-      print 'sclose: ', sclose
-      print 'ofar: ', ofar
-      print 'sfar: ', sfar
       print 'Rhub: ', Rhub
       print 'r: ', r
       print 'chord: ', chord
@@ -55,7 +35,8 @@ if __name__ == '__main__':
       print 'pitch: ', pitch
       print 'yaw_deg: ', yaw_deg
       print 'TI: ', TI
-      damage = farm_damage(turbineX,turbineY,windDirections,windFrequencies,ofree,sfree,oclose,sclose,ofar,sfar,
-                              Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)
+
+      damage = farm_damage(turbineX,turbineY,windDirections,windFrequencies,Rhub,r,chord,theta,af,
+                                Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=0.11)
 
       print damage
