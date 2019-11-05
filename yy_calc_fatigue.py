@@ -140,7 +140,7 @@ def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega
         f_o = interp1d(sp,o,kind='linear')
         actual_speed = get_eff_turbine_speeds(turbineX, turbineY, free_speed,TI=TI)[turb_index]
         Omega = f_o(actual_speed)
-        # print 'Omega: ', Omega
+        print 'Omega: ', Omega
 
 
         az = 90.
