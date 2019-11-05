@@ -90,7 +90,7 @@ def get_edgewise_damage(turbineX,turbineY,turb_index,Rhub,r,chord,theta,af,Rtip,
         free_speed = 8.
         actual_speed = get_eff_turbine_speeds(turbineX, turbineY, free_speed,TI=TI)[turb_index]
         TSR = 7.55
-        Omega = actual_speed*TSR/Rtip
+        Omega = actual_speed*TSR/Rtip/(2.*np.pi)*60.
         print Omega
 
         az = 90.
