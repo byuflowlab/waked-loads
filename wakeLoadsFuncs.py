@@ -303,8 +303,8 @@ if __name__ == '__main__':
     M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
     M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
 
-    print M1_flap-M2_flap
-    print M1_edge-M2_edge
+    print(M1_flap-M2_flap)
+    print(M1_edge-M2_edge)
 
     x1,y1,x2,y2 = findXY(turbineX[1],turbineY[1],r,0.)
     speeds1 = get_speeds(turbineX, turbineY, x1, y1, wind_speed)
@@ -312,8 +312,8 @@ if __name__ == '__main__':
     M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
     M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
 
-    print M1_flap-M2_flap
-    print M1_edge-M2_edge
+    print(M1_flap-M2_flap)
+    print(M1_edge-M2_edge)
 
 
     turbineX = np.array([0.,504.])

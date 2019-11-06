@@ -2,7 +2,7 @@ import numpy as np
 import math
 from ccblade import *
 from wakeLoadsFuncs import *
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import time as Time
 import scipy.signal
@@ -91,7 +91,6 @@ def get_edgewise_damage(turbineX,turbineY,turb_index,Rhub,r,chord,theta,af,Rtip,
         actual_speed = get_eff_turbine_speeds(turbineX, turbineY, free_speed,TI=TI)[turb_index]
         TSR = 7.55
         Omega = actual_speed*TSR/Rtip/(2.*np.pi)*60.
-        print Omega
 
         az = 90.
         x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],hubHt,r,yaw_deg,az)

@@ -1,6 +1,6 @@
 
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import time as Time
 from yy_calc_fatigue import *
 import sys
