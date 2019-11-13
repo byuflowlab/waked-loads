@@ -11,6 +11,7 @@ import sys
 import time
 sys.dont_write_bytecode = True
 
+
 def calc_moment_edge(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=90.,shearExp=0.):
 
     N = len(r)
@@ -23,36 +24,9 @@ def calc_moment_edge(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,
     rotor = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
                            precone, tilt, yaw, shearExp, hubHt, nSector)
     _, loads_edge = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
-    # print 'run CCBlade: ', time.time()-s
 
-    # s = time.time()
-
-    # #approximate load at r = Rhub
-    # dL = loads_flap[1]-loads_flap[0]
-    # dr = r[1]-r[0]
-    # m = dL/dr
-    # Lhub = np.array([loads_flap[0] + m*(Rhub-r[0])])
-    #
-    # #approximate load at r = Rtip
-    # dL = loads_flap[-1]-loads_flap[-2]
-    # dr = r[-1]-r[-2]
-    # m = dL/dr
-    # Ltip = np.array([loads_flap[-1] + m*(Rtip-r[-1])])
-    #
-    # Rhub = np.array([Rhub])
-    # Rtip = np.array([Rtip])
-    #
     r = np.append(Rhub,r)
     r = np.append(r,Rtip)
-    # loads_flap = np.append(Lhub,loads_flap)
-    # loads_flap = np.append(loads_flap,Ltip)
-    #
-    # L = interpolate.interp1d(r,loads_flap)
-    # rad = np.linspace(Rhub,Rtip,500)
-    # x = L(rad)*(rad-loc)
-    # M_flap = np.trapz(x,x=rad)
-
-
 
     #approximate load at r = Rhub
     dL = loads_edge[1]-loads_edge[0]
@@ -80,7 +54,6 @@ def calc_moment_edge(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,
     grav = 9.81
     M_edge += np.sin(np.deg2rad(azimuth))*blade_mass*grav*blade_cm
 
-    # print 'the rest: ', time.time()-s
     return M_edge
 
 
@@ -151,14 +124,12 @@ def calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSect
         X[k] = x[k]
     M_edge = np.trapz(X,dx=rad[1]-rad[0])
 
-
     """add gravity loads"""
     blade_mass = 17536.617
     blade_cm = 20.650
     grav = 9.81
     M_edge += np.sin(np.deg2rad(azimuth))*blade_mass*grav*blade_cm
 
-    # print 'the rest: ', time.time()-s
     return M_flap,M_edge
 
 
@@ -195,8 +166,7 @@ def findXYZ(x_hub,y_hub,z_hub,r,yaw_deg,azimuth_deg):
     return x_locs, y_locs, z_locs
 
 
-def get_speeds(turbineX, turbineY, xpoints, ypoints, zpoints, wind_speed, wec_factor=1.0,wake_model_version=2016,sm_smoothing=700.,
-                calc_k_star=True,ti_calculation_method=2,wake_combination_method=1,shearExp=0.,TI=0.11):
+def get_speeds(turbineX, turbineY, xpoints, ypoints, zpoints, wind_speed, wec_factor=1.0, wake_model_version=2016, sm_smoothing=700., calc_k_star=True, ti_calculation_method=2, wake_combination_method=1, shearExp=0., TI=0.11):
     wec_factor = 1.
     nTurbines = len(turbineX)
     turbineZ = np.ones(nTurbines)*90.
@@ -211,12 +181,9 @@ def get_speeds(turbineX, turbineY, xpoints, ypoints, zpoints, wind_speed, wec_fa
     z_ref = 50.
     z_0 = 0.
     shear_exp = shearExp
-    # RotorPointsY = np.array([0.])
-    # RotorPointsZ = np.array([0.])
-    # nRotorPoints = 20
-    # RotorPointsY, RotorPointsZ = sunflower_points(nRotorPoints)
-    RotorPointsY = np.array([0.,0.,0.69,-0.69])
-    RotorPointsZ = np.array([0.69,-0.69,0.,0.])
+
+    RotorPointsY = np.array([0.])
+    RotorPointsZ = np.array([0.])
 
     velX = xpoints
     velY = ypoints
@@ -240,8 +207,7 @@ def get_speeds(turbineX, turbineY, xpoints, ypoints, zpoints, wind_speed, wec_fa
     return ws_array, wake_diameters
 
 
-def get_eff_turbine_speeds(turbineX, turbineY, wind_speed, wec_factor=1.0,wake_model_version=2016,sm_smoothing=700.,
-                calc_k_star=True,ti_calculation_method=2,wake_combination_method=1,shearExp=0.,TI=0.11):
+def get_eff_turbine_speeds(turbineX, turbineY, wind_speed, wec_factor=1.0, wake_model_version=2016, sm_smoothing=700., calc_k_star=True, ti_calculation_method=2, wake_combination_method=1, shearExp=0., TI=0.11):
     wec_factor = 1.
     nTurbines = len(turbineX)
     turbineZ = np.ones(nTurbines)*90.
@@ -256,10 +222,6 @@ def get_eff_turbine_speeds(turbineX, turbineY, wind_speed, wec_factor=1.0,wake_m
     z_ref = 50.
     z_0 = 0.
     shear_exp = shearExp
-    # RotorPointsY = np.array([0.])
-    # RotorPointsZ = np.array([0.])
-    # nRotorPoints = 20
-    # RotorPointsY, RotorPointsZ = sunflower_points(nRotorPoints)
 
     RotorPointsY = np.array([0.,0.,0.69,-0.69])
     RotorPointsZ = np.array([0.69,-0.69,0.,0.])
@@ -337,62 +299,6 @@ if __name__ == '__main__':
     pitch = 0.0
     Omega = 10.
 
-    # locs = np.linspace(Rhub,Rtip,100)
-    # M = np.zeros(100)
-    # for i in range(100):
-    #     M[i] = calc_moment(Uinf,locs[i],r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,
-    #                                     hubHt,nSector,Omega,pitch)
-    # print M
-
-    # import matplotlib.pyplot as plt
-    # fig = plt.figure(figsize=(15,5))
-    # ax1 = plt.subplot(131)
-    # ax2 = plt.subplot(132)
-    # ax3 = plt.subplot(133)
-    #
-    #
-    # az = np.linspace(0.,720.*5,300)
-    # for i in range(100):
-    #     ax1.cla()
-    #     ax2.cla()
-    #     ax3.cla()
-    #     ax1.axis('off')
-    #     ax2.axis('off')
-    #     ax3.axis('off')
-    #     ax1.axis('square')
-    #     ax2.axis('square')
-    #     ax3.axis('square')
-    #     ax1.set_ylim(-70.,70.)
-    #     ax2.set_ylim(30.,170.)
-    #     ax3.set_ylim(30.,170.)
-    #     ax1.set_xlim(-10.,10.)
-    #     ax2.set_xlim(-10.,10.)
-    #     ax3.set_xlim(70.,-70.)
-    #
-    #     azimuth_deg = az[i]
-    #     yaw_deg = 0.
-    #     x_locs,y_locs,z_locs = findXYZ(0.,0.,100.,r,yaw_deg,azimuth_deg)
-    #
-    #
-    #     if az[i]%360 < 90. or az[i]%360 > 270.:
-    #         ax1.plot(0.,0.,'ob',markersize=15)
-    #     if az[i]%360 < 180.:
-    #         ax2.plot(0.,100.,'ob',markersize=15)
-    #     ax3.plot(0.,100.,'ob',markersize=15)
-    #
-    #     ax1.plot(x_locs,y_locs,'or')
-    #     ax2.plot(x_locs,z_locs,'or')
-    #     ax3.plot(y_locs,z_locs,'or')
-    #
-    #
-    #     if az[i]%360 > 90. and az[i]%360 < 270.:
-    #         ax1.plot(0.,0.,'ob',markersize=15)
-    #     if az[i]%360 > 180.:
-    #         ax2.plot(0.,100.,'ob',markersize=15)
-    #
-    #
-    #     plt.pause(0.01)
-
     turbineX = np.array([0.,504.])
     turbineY = np.array([0.,126.])
     wind_speed = 8.
@@ -400,6 +306,7 @@ if __name__ == '__main__':
     x1,y1,x2,y2 = findXY(turbineX[0],turbineY[0],r,0.)
     speeds1 = get_speeds(turbineX, turbineY, x1, y1, wind_speed)
     speeds2 = get_speeds(turbineX, turbineY, x2, y2, wind_speed)
+
     M1_flap, M1_edge = calc_moment(speeds1,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
     M2_flap, M2_edge = calc_moment(speeds2,0.,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch)
 
@@ -426,21 +333,3 @@ if __name__ == '__main__':
         mom[i] =  calc_moment(Uinf,loc,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=90.,shearExp=0.)
     plt.plot(az,mom)
     plt.show()
-
-
-    # import matplotlib.pyplot as plt
-    # plt.plot(x1,y1,'o',color='C0')
-    # plt.plot(x2,y2,'o',color='C0')
-    # plt.plot(0.,0.,'o',color='C1')
-    # plt.axis('equal')
-    # plt.show()
-
-    # plt.plot(locs,M)
-    # plt.show()
-
-    # plt.plot(r, Tp/1e3, 'k', label='lead-lag')
-    # plt.plot(r, Np/1e3, 'r', label='flapwise')
-    # plt.xlabel('blade fraction')
-    # plt.ylabel('distributed aerodynamic loads (kN)')
-    # plt.legend(loc='upper left')
-    # plt.show()

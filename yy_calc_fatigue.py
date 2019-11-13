@@ -15,61 +15,6 @@ from numpy import fabs as fabs
 import numpy as np
 
 
-def find_omega(filename_free,filename_close,filename_far,TI=0.11,wind_speed=8.):
-        """
-        setup the atmospheric turbulence loads that get superimposed on the loads from CCBlade
-
-        inputs:
-        filename_free:      the freestream loads FAST file path
-        filename_close:     the 4D downstream fully waked loads FAST file path
-        filename_far:       the 10D downstream fully waked loads FAST file path
-        TI:                 the turbulence intensity
-        N:                  this should always be the length of the FAST data you're passing in
-
-        outputs:
-        f_atm_free:         a function giving the freestream atmospheric loads as a function of time
-        f_atm_close:        a function giving the 4D downstream fully waked atmospheric loads as a function of time
-        f_atm_far:          a function giving the 10D downstream fully waked atmospheric loads as a function of time
-        Omega_free:         the time average of the rotation rate for the freestream FAST file
-        Omega_waked:        the time average of the rotation rate for the close waked FAST file
-        free_speed:         the freestream wind speed
-        waked_speed:        the fully waked close wind speed
-        """
-
-        """free FAST"""
-        lines = np.loadtxt(filename_free,skiprows=8)
-        Omega_free = np.mean(lines[:,6])
-
-        """waked FAST CLOSE"""
-        lines = np.loadtxt(filename_close,skiprows=8)
-        Omega_close = np.mean(lines[:,6])
-
-        """waked FAST FAR"""
-        lines = np.loadtxt(filename_far,skiprows=8)
-        Omega_far = np.mean(lines[:,6])
-
-
-        """setup the CCBlade loads"""
-        turbineX_close = np.array([0.,126.4])*4.
-        turbineX_far = np.array([0.,126.4])*10.
-
-        turbineY_waked = np.array([0.,0.])
-
-        hub_height = 90.
-
-        free_speed = wind_speed
-        close_speed = get_eff_turbine_speeds(turbineX_close, turbineY_waked, wind_speed,TI=TI)[1]
-        far_speed = get_eff_turbine_speeds(turbineX_far, turbineY_waked, wind_speed,TI=TI)[1]
-
-        print 'tip speed ratios'
-        print 'free: ', Omega_free*126.4/2./free_speed
-        print 'close: ', Omega_close*126.4/2./close_speed
-        print 'far: ', Omega_far*126.4/2./far_speed
-
-        # return flap_free_atm, edge_free_atm, Omega_free, free_speed, flap_close_atm, edge_close_atm, Omega_close, close_speed, flap_far_atm, edge_far_atm, Omega_far, far_speed
-        return Omega_free, free_speed, Omega_close, close_speed, Omega_far, far_speed
-
-
 def setup_airfoil():
         """
         setup CCBlade inputs
@@ -123,36 +68,23 @@ def setup_airfoil():
         return Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg
 
 
-def make_edge_loads(upper,lower,Omega,N=24001,duration=10.):
-        n_cycles = Omega*duration
-        t = np.linspace(0.,float(n_cycles),N)
-        amp = (upper-lower)/2.
-        avg = (upper+lower)/2.
-        m = np.sin(t*2.*np.pi)*amp+avg
-        return m
+def get_edgewise_damage(turbineX,turbineY,turb_index,TSR_TSR,TSR_speeds,free_speed,Rhub,r,chord,theta,
+                        af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=0.11):
 
-
-def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,
-                        Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=0.11):
-
-        o = np.array([Omega_free,Omega_far,Omega_close,Omega_close])
-        sp = np.array([free_speed,far_speed,close_speed,0.])
-        f_o = interp1d(sp,o,kind='linear')
         actual_speed = get_eff_turbine_speeds(turbineX, turbineY, free_speed,TI=TI)[turb_index]
-        Omega = f_o(actual_speed)
-        print 'Omega: ', Omega
+        if isinstance(TSR_TSR,float):
+                TSR = TSR_TSR
+        else:
+                f_TSR = interp1d(TSR_speeds, TSR_TSR, kind='cubic')
+                TSR = f_TSR(actual_speed)
 
+
+        Omega = TSR*actual_speed/Rtip
+        Omega = Omega*9.5492965964254 #rad/s to RPM
 
         az = 90.
         x_locs,y_locs,z_locs = findXYZ(turbineX[turb_index],turbineY[turb_index],hubHt,r,yaw_deg,az)
-        # print 'Omega: ', Omega
-        # print 'turbineX: ', turbineX
-        # print 'turbineY: ', turbineY
-        # print 'x_locs: ', x_locs
-        # print 'y_locs: ', y_locs
-        # print 'z_locs: ', z_locs
-        # print 'free_speed: ', free_speed
-        # print 'TI: ', TI
+
         speeds, _ = get_speeds(turbineX, turbineY, x_locs, y_locs, z_locs, free_speed, TI=TI)
         # edge90 = calc_moment_edge(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,wind_speed,pitch,azimuth=az)
         _,edge90 = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,Omega,pitch,azimuth=az)
@@ -175,16 +107,11 @@ def get_edgewise_damage(turbineX,turbineY,turb_index,Omega_free,free_speed,Omega
         alternate = (moment_alternate*R/I)
 
         # Goodman correction
-        # su = 345000.
-        # su = 4590000.
         su = 535000.
-        # su = 459000.
         effective = alternate/(1.-mean/su)
 
         m = 10.
         fos = 1.15
-        # fos = 2.
-        # Nfail = 10.**((-mar[i]/su+1.)/0.1) #I'm pretty sure this is wrong for these cycles
         Nfail = (su/(effective*fos))**m #mLife
 
         nCycles = Omega*60.*24.*365.25*20.
@@ -287,86 +214,7 @@ def rainflow(array_ext,flm=0,l_ult=1e16,uc_mult=0.5):
     return array_out
 
 
-def calc_damage_moments(m_edge,freq,fos=2):
-
-    """
-    calculate the damage of a turbine from a single direction
-
-    inputs:
-    moments:        the moment history
-    freq:           the probability of these moments
-    fos:            factor of safety
-
-    outputs:
-    damage:         fatigue damage
-
-    """
-
-    d = 0.
-    R = 0.5 #root cylinder radius
-    I = 0.25*np.pi*(R**4-(R-0.08)**4)
-
-    sigma = m_edge*R/I
-
-    #find the peak stresses
-    pp = scipy.signal.find_peaks(sigma)[0]
-    pn = scipy.signal.find_peaks(-sigma)[0]
-    p = np.append(0,pp)
-    p = np.append(p,pn)
-    p = np.append(p,len(sigma)-1)
-    p = np.sort(p)
-    peaks = np.zeros(len(p))
-    vv = np.arange(len(sigma))
-    v = np.zeros(len(p))
-
-    for i in range(len(p)):
-        peaks[i] = sigma[p[i]]
-        v[i] = vv[p[i]]
-
-    #rainflow counting
-    array = rainflow(peaks)
-
-    alternate = array[0,:]/2.
-    mean = array[1,:]
-    count = array[3,:]
-
-    # Goodman correction
-    # su = 3450000.
-    # su = 4590000.
-    # su = 596000.
-    su = 535000.
-    # su = 459000.
-    mar = alternate/(1.-mean/su)
-
-    npts = len(mar)
-
-    # plt.plot(count,mar,'o')
-    # plt.show()
-
-    #damage calculations
-    n = np.zeros(npts)
-    m = 10.
-    fos = 1.15
-    # fos = 1.75
-    for i in range(npts):
-        # Nfail = 10.**(((-mar[i]*fos)/su+1.)/0.1)
-        Nfail = ((su)/(mar[i]*fos))**m
-        n[i] = Nfail
-        mult = 20.*365.*24.*6.*freq
-
-        d += count[i]*mult/Nfail
-        # if count[i]*mult/Nfail > 0.02:
-        #         print Nfail
-
-
-    # plt.plot(count,n,'o')
-    # plt.show()
-
-
-    return d
-
-
-def farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,
+def farm_damage(turbineX,turbineY,windDirections,windFrequencies,windSpeeds,TSR_TSR,TSR_speeds,
                         Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=0.11):
     """
     calculate the damage of each turbine in the farm for every wind direction
@@ -397,8 +245,9 @@ def farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free
     for j in range(nDirections):
             turbineXw, turbineYw = fast_calc_aep.windframe(windDirections[j], turbineX, turbineY)
             for i in range(nTurbines):
-                damage[i] += get_edgewise_damage(turbineXw,turbineYw,i,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,
+                damage[i] += get_edgewise_damage(turbineXw,turbineYw,i,TSR_TSR,TSR_speeds,windSpeeds[j],
                                         Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=TI)*windFrequencies[j]
+
     return damage
 
 
@@ -406,262 +255,27 @@ if __name__ == '__main__':
 
         windDirections = np.array([270.])
         windFrequencies = np.array([1.])
+        windSpeeds = np.array([8.])
 
-        farm_damage(turbineX,turbineY,windDirections,windFrequencies,Omega_free,free_speed,Omega_close,close_speed,Omega_far,far_speed,
-                                Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=0.11)
+        TSR_speeds = np.array([0.,3.1393,3.6744,4.0369,5.0215,6.0238,7.0089,7.8040,9.0142,
+                        10.017,11.382,12.022,13.007,14.010,14.995,15.998,17.000,
+                        18.020,19.023,19.991,20.993,21.996,22.999,24.001,24.969,100.])
+        TSR_TSR = np.array([14.848,14.848,12.945,11.648,9.7426,8.6149,7.8329,7.3973,7.3918,
+                        7.3872,6.8627,6.5142,6.0777,5.4684,5.1184,4.7683,4.5045,
+                        4.3271,4.0634,3.8862,3.6224,3.4451,3.2677,3.1768,2.9996,2.9996])
 
-        # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C664_W8_T11.0_P0.0_7D_L0.5/Model.out'
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C655_W8_T11.0_P0.0_4D_L0.5/Model.out'
-        #
-        # lines = np.loadtxt(filename,skiprows=8)
-        # angles = lines[:,5]
-        # mx_FAST = lines[:,11]
-        #
-        # # angles = angles[0:1000]
-        # # mx_FAST = mx_FAST[0:1000]
-        #
-        # ang = np.array([])
-        # mom = np.array([])
-        # for i in range(1000):
-        #         ang = np.append(ang,angles[i+37])
-        #         mom = np.append(mom,mx_FAST[i+37])
-        #         if angles[i+38] < angles[i+37]:
-        #                 plt.plot(ang,mom,color='C0')
-        #                 ang = np.array([])
-        #                 mom = np.array([])
-        #
-        # Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
-        #
-        # hub_height = 90.
-        #
-        # # angles = np.linspace(0.,720.,100)
-        # edge1 = np.zeros_like(angles)
-        # flap1 = np.zeros_like(angles)
-        #
-        # edge2 = np.zeros_like(angles)
-        # flap2 = np.zeros_like(angles)
-        #
-        # turbineX = np.array([0.,126.4])*7.
-        #
-        # turbineY1 = np.array([0.,126.4])*0.5
-        #
-        # angles = np.linspace(0.,360.,100)
-        # edge1 = np.zeros_like(angles)
-        # flap1 = np.zeros_like(angles)
-        # for i in range(len(angles)):
-        #
-        #         az = angles[i]
-        #         #freestream
-        #         x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
-        #         speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        #         flap1[i], edge1[i] = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)
-        #
-        # plt.plot(angles,edge1/1000.,color='C1',linewidth=2)
-        #
-        #
-        #
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C664_W8_T11.0_P0.0_7D_L0.5/Model.out'
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
-        # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C655_W8_T11.0_P0.0_4D_L0.5/Model.out'
-        #
-        # lines = np.loadtxt(filename,skiprows=8)
-        # angles = lines[:,5]
-        # mx_FAST = lines[:,11]
-        #
-        # # angles = angles[0:1000]
-        # # mx_FAST = mx_FAST[0:1000]
-        #
-        # ang = np.array([])
-        # mom = np.array([])
-        # for i in range(1000):
-        #         ang = np.append(ang,angles[i+37])
-        #         mom = np.append(mom,mx_FAST[i+37])
-        #         if angles[i+38] < angles[i+37]:
-        #                 plt.plot(ang,mom,color='C0')
-        #                 ang = np.array([])
-        #                 mom = np.array([])
-        #
-        # Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
-        #
-        # hub_height = 90.
-        #
-        # # angles = np.linspace(0.,720.,100)
-        # edge1 = np.zeros_like(angles)
-        # flap1 = np.zeros_like(angles)
-        #
-        # edge2 = np.zeros_like(angles)
-        # flap2 = np.zeros_like(angles)
-        #
-        # turbineX = np.array([0.,126.4])*4.
-        #
-        # turbineY1 = np.array([0.,126.4])*0.5
-        #
-        # angles = np.linspace(0.,360.,100)
-        # edge1 = np.zeros_like(angles)
-        # flap1 = np.zeros_like(angles)
-        # for i in range(len(angles)):
-        #
-        #         az = angles[i]
-        #         #freestream
-        #         x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
-        #         speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        #         flap1[i], edge1[i] = calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)
-        #
-        # plt.plot(angles,edge1/1000.,color='C1',linewidth=2)
-        #
-        #
-        #
-        #
-        # plt.show()
+        Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg = setup_airfoil()
 
-                # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY2[1],hub_height,r,yaw_deg,az)
-                # speeds, _ = get_speeds(turbineX, turbineY2, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-                # flap2[i], edge2[i] = calc_moment(speeds,Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)
+        spac = np.linspace(-3.,3.,25)
+        print spac
+        D = Rtip*2.
+        dam = np.zeros(25)
 
-        # plt.plot(angles,flap1/1000.,'--r')
+        for i in range(25):
+                turbineX = np.array([0.,D*10.])
+                turbineY = np.array([0.,spac[i]*D])
 
-        # az = 0.
-        # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
-        # speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        # print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        # plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
-        #
-        # az = 90.
-        # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
-        # speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        # print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        # plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
-        #
-        # az = 180.
-        # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
-        # speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        # print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        # plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
-        #
-        # az = 270.
-        # x_locs,y_locs,z_locs = findXYZ(turbineX[1],turbineY1[1],hub_height,r,yaw_deg,az)
-        # speeds, _ = get_speeds(turbineX, turbineY1, x_locs, y_locs, z_locs, 8.0,TI=0.11)
-        # print calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.
-        # plt.plot(az,calc_moment(speeds,Rhub,r,chord,theta,af,Rhub,Rtip,B,rho,mu,precone,hubHt,nSector,8.0,pitch,azimuth=az)[1]/1000.,'ok')
+                dam[i] =  farm_damage(turbineX,turbineY,windDirections,windFrequencies,windSpeeds,TSR_TSR,TSR_speeds,
+                                        Rhub,r,chord,theta,af,Rtip,B,rho,mu,precone,hubHt,nSector,pitch,yaw_deg,TI=0.056)[1]
 
-
-        # plt.plot(angles,edge1/1000.,color='C1')
-
-        # plt.plot(angles,mx_FAST)
-
-        # plt.plot(angles,flap2/1000.,'--b')
-        # plt.plot(angles,edge2/1000.,'-b')
-
-        # plt.show()
-
-
-        # T11
-        #paths to the FAST output files
-        # filename_free = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C680_W8_T11.0_P0.0_m2D_L0/Model.out'
-        # filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
-        # filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
-        # T5.6
-        # filename_free = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C464_W8_T5.6_P0.0_m2D_L0/Model.out'
-        # filename_close = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C437_W8_T5.6_P0.0_4D_L0/Model.out'
-        # filename_far = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C455_W8_T5.6_P0.0_10D_L0/Model.out'
-
-
-        """test edge setup"""
-        # ffree, ofree, sfree, fclose, oclose, sclose, ffar, ofar, sfar = setup_atm_flap(filename_free,filename_close,filename_far)
-        #
-        # upper_free,lower_free,upper_close,lower_close,upper_far,lower_far = setup_edge_bounds(filename_free,filename_close,filename_far)
-        #
-        # m = make_edge_loads(upper_free,lower_free,ofree)
-        #
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C653_W8_T11.0_P0.0_4D_L0/Model.out'
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C671_W8_T11.0_P0.0_10D_L0/Model.out'
-        # filename = filename_free
-        # lines = np.loadtxt(filename,skiprows=8)
-        # time = lines[:,0]
-        # mx_FAST = lines[:,11]
-        #
-        # plt.plot(m[5000:10000])
-        # plt.plot(mx_FAST[5000:10000])
-        # plt.show()
-
-
-
-        """test flap setup"""
-        # ffree, ofree, sfree, fclose, oclose, sclose, ffar, ofar, sfar = setup_atm_flap(filename_free,filename_close,filename_far)
-        # T = np.linspace(0.,600.,24001)
-        # ax1 = plt.subplot(131)
-        # ax2 = plt.subplot(132)
-        # ax3 = plt.subplot(133)
-        #
-        # ax1.plot(T,ffree)
-        #
-        # ax2.plot(T,fclose)
-        #
-        # ax3.plot(T,ffar)
-        #
-        # ax1.set_ylim(-3000.,3000.)
-        # ax2.set_ylim(-3000.,3000.)
-        # ax3.set_ylim(-3000.,3000.)
-        #
-        # plt.show()
-
-
-        #
-        #
-        # plt.figure(1)
-        # plt.plot(T,ffree,'-r')
-        #
-        # plt.figure(2)
-        # plt.plot(T,efree,'-r')
-        #
-        # turbineX = np.array([0.,126.4])*4.
-        # turbineY = np.array([0.,126.4])*0.5
-        # turb_index = 1
-        #
-        # get_loads_history(turbineX,turbineY,turb_index,ofree,oclose,ofar,sfree,sclose,sfar,
-        #                         ffree,fclose,ffar,efree,eclose,efar)
-        #
-        #
-        # plt.show()
-        # #
-
-        # """test full"""
-        # turbineX = np.array([0.,126.4])*7.
-        # turbineY = np.array([0.,126.4])*0.5
-        # turb_index = 1
-        # s = Time.time()
-        # ffree, ofree, sfree, fclose, oclose, sclose, ffar, ofar, sfar = setup_atm_flap(filename_free,filename_close,filename_far)
-        # print 'setup flap: ', Time.time()-s
-        # s = Time.time()
-        # upper_free,lower_free,upper_close,lower_close,upper_far,lower_far = setup_edge_bounds(filename_free,filename_close,filename_far)
-        # print 'setup edge: ', Time.time()-s
-        # s = Time.time()
-        # recovery_dist = find_freestream_recovery()
-        # print 'setup recovery: ', Time.time()-s
-        # s = Time.time()
-        # flap,edge = get_loads_history(turbineX,turbineY,turb_index,ofree,oclose,ofar,sfree,sclose,
-        #         sfar,ffree,fclose,ffar,upper_free,lower_free,upper_close,lower_close,
-        #         upper_far,lower_far,recovery_dist)
-        # print 'run loads: ', Time.time()-s
-        #
-        # # filename = filename_free
-        # # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C662_W8_T11.0_P0.0_7D_L0/Model.out'
-        # filename = '/Users/ningrsrch/Dropbox/Projects/waked-loads/BYU/BYU/C664_W8_T11.0_P0.0_7D_L0.5/Model.out'
-        # lines = np.loadtxt(filename,skiprows=8)
-        # mx_FAST = lines[:,11]
-        # my_FAST = lines[:,12]
-        #
-        # plt.figure(1)
-        # plt.plot(flap)
-        # plt.plot(my_FAST)
-        #
-        # plt.figure(2)
-        # plt.plot(edge)
-        # plt.plot(mx_FAST)
-        #
-        # plt.show()
+        print repr(dam)
